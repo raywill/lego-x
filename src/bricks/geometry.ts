@@ -188,6 +188,18 @@ function createPrimitiveGeometry(
         'y',
         definition.axis,
       );
+    case 'cone':
+      return orientGeometry(
+        new THREE.ConeGeometry(
+          definition.radius,
+          definition.height,
+          36,
+          1,
+          false,
+        ),
+        'y',
+        definition.axis,
+      );
     case 'tube':
       return createTubeGeometry(
         definition.outerRadius,

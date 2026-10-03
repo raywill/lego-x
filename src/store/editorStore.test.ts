@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import { BRICK_DEFINITIONS } from '../bricks/catalog';
 import { ROTATION_STEP } from '../config/brickConfig';
 import { computeDropPlacement } from '../editor/gravity/dropEngine';
-import { createConnection } from '../editor/projectModel';
+import { createConnection, serializeProject } from '../editor/projectModel';
 import { useEditorStore } from './editorStore';
 
 const definition = BRICK_DEFINITIONS.find((item) => item.connectors.length > 0);
@@ -159,5 +159,35 @@ describe('editor store', () => {
     useEditorStore.getState().commitDrag();
 
     expect(useEditorStore.getState().bricks[0].position).toEqual([15, 5, 5]);
+  });
+
+  it('imports a serialized legox project and keeps it undoable', () => {
+    const serialized = serializeProject({
+      bricks: [{
+        id: 'file-cone',
+        definitionId: 'cone-2',
+        position: [10, 10, 20],
+        rotation: [0, 0, 0],
+      }],
+      connections: [],
+    });
+
+    expect(useEditorStore.getState().importProject(serialized)).toBe(true);
+    expect(useEditorStore.getState().bricks).toHaveLength(1);
+    expect(useEditorStore.getState().bricks[0]).toMatchObject({
+      id: 'file-cone',
+      definitionId: 'cone-2',
+    });
+
+    useEditorStore.getState().undo();
+    expect(useEditorStore.getState().bricks).toHaveLength(0);
+  });
+
+  it('rejects invalid legox project contents without replacing the scene', () => {
+    useEditorStore.getState().addBrick('cube-1');
+
+    expect(useEditorStore.getState().importProject('{bad json')).toBe(false);
+    expect(useEditorStore.getState().bricks).toHaveLength(1);
+    expect(useEditorStore.getState().toast).toContain('.legox');
   });
 });

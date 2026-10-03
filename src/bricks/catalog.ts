@@ -352,6 +352,8 @@ const plate1x2Size: Vec3Tuple = [2 * U, PLATE, U];
 const plate3x3Size: Vec3Tuple = [3 * U, PLATE, 3 * U];
 const plate1x6Size: Vec3Tuple = [6 * U, PLATE, U];
 const cylinderSize: Vec3Tuple = [U, U, U];
+const cone1Size: Vec3Tuple = [U, U, U];
+const cone2Size: Vec3Tuple = [2 * U, 2 * U, 2 * U];
 const discSize: Vec3Tuple = [2 * U, DISC, 2 * U];
 const rodSize: Vec3Tuple = [ROD_DIAMETER, 4 * U, ROD_DIAMETER];
 const ringSize: Vec3Tuple = [2 * U, PLATE, 2 * U];
@@ -466,7 +468,7 @@ for (const angle of [0, (Math.PI * 2) / 3, (Math.PI * 4) / 3]) {
   });
 }
 
-/** Exactly 25 deliberately generic construction pieces. */
+/** A deliberately small library of generic construction pieces. */
 export const BRICK_DEFINITIONS: BrickDefinition[] = [
   {
     id: 'cube-1',
@@ -582,6 +584,26 @@ export const BRICK_DEFINITIONS: BrickDefinition[] = [
     color: '#ff6577',
     geometry: { kind: 'cylinder', radius: U / 2, length: U, axis: 'y' },
     connectors: createTopBottomGrid(cylinderSize, 1, 1),
+  },
+  {
+    id: 'cone-1',
+    name: '直径一圆锥',
+    shortName: '小圆锥',
+    category: 'round',
+    size: cone1Size,
+    color: '#f47662',
+    geometry: { kind: 'cone', radius: U / 2, height: U, axis: 'y' },
+    connectors: bottomGrid(cone1Size, 1, 1),
+  },
+  {
+    id: 'cone-2',
+    name: '直径二圆锥',
+    shortName: '大圆锥',
+    category: 'round',
+    size: cone2Size,
+    color: '#ed786f',
+    geometry: { kind: 'cone', radius: U, height: 2 * U, axis: 'y' },
+    connectors: bottomGrid(cone2Size, 2, 2),
   },
   {
     id: 'disc',

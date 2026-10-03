@@ -25,6 +25,7 @@ export interface ConnectorDefinition {
 export type GeometryDefinition =
   | { kind: 'box'; size: Vec3Tuple; radius?: number }
   | { kind: 'cylinder'; radius: number; length: number; axis: Axis }
+  | { kind: 'cone'; radius: number; height: number; axis: Axis }
   | { kind: 'tube'; outerRadius: number; innerRadius: number; length: number; axis: Axis }
   | { kind: 'sphere'; radius: number }
   | { kind: 'hemisphere'; radius: number; axis: Axis }

@@ -71,6 +71,7 @@ export interface EditorStore {
   redo: () => void;
   saveProject: () => boolean;
   loadProject: () => boolean;
+  importProject: (serialized: string) => boolean;
   startPaletteDrag: (
     definitionId: string,
     pointerStart?: [number, number],
@@ -345,6 +346,17 @@ export const useEditorStore = create<EditorStore>((set, get) => ({
         set({ toast: '还没有保存的作品' });
         return false;
       }
+      const loaded = get().importProject(serialized);
+      if (loaded) set({ toast: '作品已载入' });
+      return loaded;
+    } catch {
+      set({ toast: '载入失败，保存的数据可能已损坏' });
+      return false;
+    }
+  },
+
+  importProject: (serialized) => {
+    try {
       const project = deserializeProject(serialized);
       const normalised = normaliseProject(project.bricks, project.connections);
       set((state) =>
@@ -352,12 +364,12 @@ export const useEditorStore = create<EditorStore>((set, get) => ({
           state,
           normalised.bricks,
           normalised.connections,
-          { selectedId: null, toast: '作品已载入' },
+          { selectedId: null, toast: '作品文件已打开' },
         ),
       );
       return true;
     } catch {
-      set({ toast: '载入失败，保存的数据可能已损坏' });
+      set({ toast: '无法打开：这不是有效的 .legox 作品文件' });
       return false;
     }
   },

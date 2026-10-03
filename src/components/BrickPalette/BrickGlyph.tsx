@@ -152,6 +152,31 @@ export function BrickGlyph({ definition }: { definition: BrickDefinition }) {
     );
   }
 
+  if (kind === 'cone') {
+    const large = definition.id === 'cone-2';
+    return (
+      <svg viewBox="0 0 84 62" aria-hidden="true">
+        <path
+          d={large ? 'M42 7 68 47H16Z' : 'M42 13 61 46H23Z'}
+          fill={color}
+          stroke={dark}
+          strokeWidth="2.3"
+          strokeLinejoin="round"
+        />
+        <ellipse
+          cx="42"
+          cy={large ? 47 : 46}
+          rx={large ? 26 : 19}
+          ry={large ? 7 : 5.5}
+          fill={color}
+          stroke={dark}
+          strokeWidth="2.3"
+        />
+        <path d={large ? 'M39 13 25 39' : 'M39 18 30 38'} fill="none" stroke="#fff" strokeOpacity=".58" strokeWidth="3" strokeLinecap="round" />
+      </svg>
+    );
+  }
+
   if (kind === 'cylinder') {
     const thin = definition.size[1] <= 5;
     return (

@@ -4,10 +4,22 @@ import { BRICK_DEFINITIONS, getBrickDefinition } from './catalog';
 import { createBrickGroup, getBrickGroundY } from './geometry';
 
 describe('brick catalog', () => {
-  it('contains exactly 25 unique, connector-driven construction pieces', () => {
-    expect(BRICK_DEFINITIONS).toHaveLength(25);
-    expect(new Set(BRICK_DEFINITIONS.map((definition) => definition.id)).size).toBe(25);
+  it('contains 27 unique, connector-driven construction pieces', () => {
+    expect(BRICK_DEFINITIONS).toHaveLength(27);
+    expect(new Set(BRICK_DEFINITIONS.map((definition) => definition.id)).size).toBe(27);
     expect(BRICK_DEFINITIONS.every((definition) => definition.connectors.length > 0)).toBe(true);
+  });
+
+  it('provides one-unit and two-unit printable cones', () => {
+    const small = getBrickDefinition('cone-1');
+    const large = getBrickDefinition('cone-2');
+
+    expect(small?.size).toEqual([10, 10, 10]);
+    expect(large?.size).toEqual([20, 20, 20]);
+    expect(small?.geometry.kind).toBe('cone');
+    expect(large?.geometry.kind).toBe('cone');
+    expect(small?.connectors.every((connector) => connector.type === 'socket')).toBe(true);
+    expect(large?.connectors.every((connector) => connector.type === 'socket')).toBe(true);
   });
 
   it('renders the basic block body with square BoxGeometry corners', () => {

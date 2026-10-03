@@ -1,5 +1,6 @@
 import { ChevronDown, Download, FolderOpen, LoaderCircle, RotateCcw, RotateCw, Save, Sparkles } from 'lucide-react';
-import { useEffect, useRef, useState } from 'react';
+import { type ChangeEvent, useEffect, useRef, useState } from 'react';
+import { downloadLegoxFile, isLegoxFilename } from '../../editor/projectFile';
 import { downloadStl } from '../../export/stl';
 import { useEditorStore } from '../../store/editorStore';
 
@@ -20,14 +21,16 @@ export function TopToolbar() {
   const [exporting, setExporting] = useState(false);
   const [printMenuOpen, setPrintMenuOpen] = useState(false);
   const printMenuRef = useRef<HTMLDivElement>(null);
+  const projectFileRef = useRef<HTMLInputElement>(null);
   const bricks = useEditorStore((state) => state.bricks);
+  const connections = useEditorStore((state) => state.connections);
   const canUndo = useEditorStore((state) => state.past.length > 0);
   const canRedo = useEditorStore((state) => state.future.length > 0);
   const undo = useEditorStore((state) => state.undo);
   const redo = useEditorStore((state) => state.redo);
   const clearProject = useEditorStore((state) => state.clearProject);
   const saveProject = useEditorStore((state) => state.saveProject);
-  const loadProject = useEditorStore((state) => state.loadProject);
+  const importProject = useEditorStore((state) => state.importProject);
   const setToast = useEditorStore((state) => state.setToast);
 
   const startNew = () => {
@@ -67,6 +70,39 @@ export function TopToolbar() {
     }
   };
 
+  const saveProjectFile = () => {
+    try {
+      saveProject();
+      downloadLegoxFile({ bricks, connections });
+      setToast('.legox 作品文件已保存');
+    } catch {
+      setToast('作品文件保存失败，请再试一次');
+    }
+  };
+
+  const openProjectFile = async (event: ChangeEvent<HTMLInputElement>) => {
+    const input = event.currentTarget;
+    const file = input.files?.[0];
+    input.value = '';
+    if (!file) return;
+    if (!isLegoxFilename(file.name)) {
+      setToast('请选择 .legox 作品文件');
+      return;
+    }
+    if (file.size > 10 * 1024 * 1024) {
+      setToast('这个作品文件太大了');
+      return;
+    }
+    try {
+      const opened = importProject(await file.text());
+      if (!opened) return;
+      saveProject();
+      setToast(`${file.name} 已打开`);
+    } catch {
+      setToast('无法读取这个 .legox 文件');
+    }
+  };
+
   return (
     <header className="topbar">
       <div className="brand" aria-label="数字积木">
@@ -86,8 +122,15 @@ export function TopToolbar() {
         <span className="toolbar-divider" />
         <div className="action-group project-actions">
           <button type="button" onClick={startNew} aria-label="新建作品" title="清空画板，开始新作品"><Sparkles size={18} />{showLabel('新建')}</button>
-          <button type="button" onClick={saveProject} aria-label="保存作品"><Save size={18} />{showLabel('保存')}</button>
-          <button type="button" onClick={loadProject} aria-label="读取作品"><FolderOpen size={18} />{showLabel('读取')}</button>
+          <button type="button" onClick={saveProjectFile} aria-label="保存 legox 作品文件" title="下载 .legox 作品文件"><Save size={18} />{showLabel('保存')}</button>
+          <button type="button" onClick={() => projectFileRef.current?.click()} aria-label="打开 legox 作品文件" title="从电脑打开 .legox 作品文件"><FolderOpen size={18} />{showLabel('打开')}</button>
+          <input
+            ref={projectFileRef}
+            type="file"
+            accept=".legox,application/x-legox+json"
+            hidden
+            onChange={(event) => void openProjectFile(event)}
+          />
           <div className="print-action" ref={printMenuRef}>
             <button
               type="button"
