@@ -1,9 +1,10 @@
 import { beforeEach, describe, expect, it } from 'vitest';
-import { BRICK_DEFINITIONS } from '../bricks/catalog';
+import { BRICK_DEFINITIONS, getBrickDefinition } from '../bricks/catalog';
 import { ROTATION_STEP } from '../config/brickConfig';
 import { computeDropPlacement } from '../editor/gravity/dropEngine';
 import { bricksOverlap } from '../editor/collision/collisionEngine';
-import { createConnection, serializeProject } from '../editor/projectModel';
+import { createConnection, isConnectionValid, serializeProject } from '../editor/projectModel';
+import { findBestSnap, getWorldConnectors } from '../editor/snapping/snapEngine';
 import { useEditorStore } from './editorStore';
 
 const definition = BRICK_DEFINITIONS.find((item) => item.connectors.length > 0);
@@ -184,6 +185,77 @@ describe('editor store', () => {
     expect(useEditorStore.getState().bricks).toHaveLength(2);
     expect(useEditorStore.getState().bricks[1].position).toEqual([5, 15, 5]);
     expect(useEditorStore.getState().connections).toEqual([]);
+  });
+
+  it('preserves a plate snapped to a triangle slope through commit, history, and file loading', () => {
+    const triangleDefinition = getBrickDefinition('triangle-prism');
+    const plateDefinition = getBrickDefinition('plate-1x6');
+    if (!triangleDefinition || !plateDefinition) throw new Error('Expected catalog definitions.');
+    const triangle = {
+      id: 'triangle',
+      definitionId: triangleDefinition.id,
+      position: [0, 10, 0] as [number, number, number],
+      rotation: [0, 0, 0] as [number, number, number],
+    };
+    const plate = {
+      id: 'plate',
+      definitionId: plateDefinition.id,
+      position: [0, 30, 0] as [number, number, number],
+      rotation: [0, 0, 0] as [number, number, number],
+    };
+    const slopeTargets = getWorldConnectors(triangle, triangleDefinition).filter(
+      ({ connectorId }) => connectorId.includes('slope'),
+    );
+    const candidate = findBestSnap({
+      dragged: plate,
+      draggedDefinition: plateDefinition,
+      targets: slopeTargets,
+      distanceResolver: () => 0,
+    });
+    if (!candidate) throw new Error('Expected a sloped snap candidate.');
+
+    useEditorStore.setState({
+      bricks: [triangle, plate],
+      connections: [],
+      selectedId: plate.id,
+      past: [],
+      future: [],
+      drag: null,
+      toast: null,
+    });
+    useEditorStore.getState().startBrickDrag(plate.id);
+    useEditorStore.getState().updateDragPreview({
+      ...plate,
+      position: [...candidate.transform.position],
+      rotation: [...candidate.transform.rotation],
+    }, candidate, true, true, null);
+    useEditorStore.getState().commitDrag();
+
+    const snapped = useEditorStore.getState().bricks.find(({ id }) => id === plate.id);
+    expect(snapped?.position).toEqual(candidate.transform.position);
+    expect(snapped?.rotation).toEqual(candidate.transform.rotation);
+    expect(useEditorStore.getState().connections).toEqual([candidate.connection]);
+    expect(isConnectionValid(
+      candidate.connection,
+      useEditorStore.getState().bricks,
+    )).toBe(true);
+
+    useEditorStore.getState().undo();
+    expect(useEditorStore.getState().bricks.find(({ id }) => id === plate.id)?.rotation).toEqual([0, 0, 0]);
+    useEditorStore.getState().redo();
+    expect(useEditorStore.getState().bricks.find(({ id }) => id === plate.id)?.rotation)
+      .toEqual(candidate.transform.rotation);
+    expect(useEditorStore.getState().connections).toEqual([candidate.connection]);
+
+    const serialized = serializeProject({
+      bricks: useEditorStore.getState().bricks,
+      connections: useEditorStore.getState().connections,
+    });
+    resetStore();
+    expect(useEditorStore.getState().importProject(serialized)).toBe(true);
+    expect(useEditorStore.getState().bricks.find(({ id }) => id === plate.id)?.rotation)
+      .toEqual(candidate.transform.rotation);
+    expect(useEditorStore.getState().connections).toEqual([candidate.connection]);
   });
 
   it('locks pointer updates while falling and commits the predicted landing', () => {

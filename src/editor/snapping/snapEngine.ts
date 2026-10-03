@@ -91,9 +91,28 @@ export const DEFAULT_SNAP_ENGINE_CONFIG: Readonly<SnapEngineConfig> = {
   epsilon: 1e-6,
 };
 
+const CONNECTOR_AXIS_EPSILON = 1e-5;
+
 const OUTWARD_NORMAL = new Vector3(0, 1, 0);
 const TWIST_REFERENCE = new Vector3(0, 0, 1);
 const MATE_FLIP = new Quaternion().setFromAxisAngle(TWIST_REFERENCE, Math.PI);
+
+/** True when a connector normal points along one of the scene's cardinal axes. */
+export function isAxisAlignedConnectorNormal(normal: readonly number[]): boolean {
+  return normal.filter((component) => Math.abs(component) > CONNECTOR_AXIS_EPSILON).length === 1;
+}
+
+/**
+ * Sloped connectors deliberately create non-cardinal brick orientations. They
+ * are an explicit exception to free-placement grid alignment: the connector
+ * frame, rather than the body's bounding box, defines the exact placement.
+ */
+export function isSlopedSnapCandidate(
+  candidate: Pick<SnapCandidate, 'source' | 'target'>,
+): boolean {
+  return !isAxisAlignedConnectorNormal(candidate.source.normal)
+    || !isAxisAlignedConnectorNormal(candidate.target.normal);
+}
 
 export function areConnectorsCompatible(
   first: ConnectorDefinition,

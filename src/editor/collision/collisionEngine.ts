@@ -85,10 +85,12 @@ export function findNearestFreeGridPlacement(
 export function separateOverlappingBricks(
   bricks: readonly BrickInstance[],
   ignoredPairKeys: ReadonlySet<string> = new Set<string>(),
+  preserveTransformBrickIds: ReadonlySet<string> = new Set<string>(),
 ): BrickInstance[] {
   const placed: BrickInstance[] = [];
   for (const rawBrick of bricks) {
-    let brick = snapBrickToGrid(rawBrick);
+    const preserveTransform = preserveTransformBrickIds.has(rawBrick.id);
+    let brick = preserveTransform ? cloneBrick(rawBrick) : snapBrickToGrid(rawBrick);
     for (let attempts = 0; attempts <= placed.length; attempts += 1) {
       const colliders = placed.filter((other) => (
         !ignoredPairKeys.has(brickPairKey(brick.id, other.id))
@@ -98,31 +100,45 @@ export function separateOverlappingBricks(
       const bounds = getBrickBodyBounds(brick);
       const nextBottom = Math.max(...colliders.map((other) => getBrickBodyBounds(other).max.y));
       const lift = Math.ceil((nextBottom - bounds.min.y) / BRICK_LAYER) * BRICK_LAYER;
-      brick = snapBrickToGrid({
+      const lifted: BrickInstance = {
         ...brick,
         position: [brick.position[0], brick.position[1] + Math.max(BRICK_LAYER, lift), brick.position[2]],
         rotation: [...brick.rotation],
-      });
+      };
+      brick = preserveTransform ? lifted : snapBrickToGrid(lifted);
     }
     const stillCollides = placed.some((other) => (
       !ignoredPairKeys.has(brickPairKey(brick.id, other.id))
       && bricksOverlap(brick, other)
     ));
-    if (stillCollides) brick = liftAboveAll(brick, placed);
+    if (stillCollides) brick = liftAboveAll(brick, placed, preserveTransform);
     placed.push(brick);
   }
   return placed;
 }
 
-function liftAboveAll(brick: BrickInstance, others: readonly BrickInstance[]): BrickInstance {
+function liftAboveAll(
+  brick: BrickInstance,
+  others: readonly BrickInstance[],
+  preserveTransform = false,
+): BrickInstance {
   if (others.length === 0) return brick;
   const bounds = getBrickBodyBounds(brick);
   const highestTop = Math.max(...others.map((other) => getBrickBodyBounds(other).max.y));
-  return snapBrickToGrid({
+  const lifted: BrickInstance = {
     ...brick,
     position: [brick.position[0], brick.position[1] + highestTop - bounds.min.y, brick.position[2]],
     rotation: [...brick.rotation],
-  });
+  };
+  return preserveTransform ? lifted : snapBrickToGrid(lifted);
+}
+
+function cloneBrick(brick: BrickInstance): BrickInstance {
+  return {
+    ...brick,
+    position: [...brick.position],
+    rotation: [...brick.rotation],
+  };
 }
 
 function overlapDepth(

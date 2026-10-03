@@ -9,11 +9,14 @@ import type {
   ConnectorDefinition,
 } from '../../types/model';
 import { isConnectionValid } from '../projectModel';
+import { isBrickOnGrid } from '../grid/gridEngine';
+import { isSnapPlacementGridCompatible } from './snapPlacementPolicy';
 import {
   areConnectorsCompatible,
   computeSnapTransform,
   findBestSnap,
   getWorldConnectors,
+  isSlopedSnapCandidate,
 } from './snapEngine';
 
 const HALF_TURN = Math.PI;
@@ -253,6 +256,59 @@ describe('findBestSnap', () => {
       .add(new Vector3(...candidate!.transform.position));
     expect(oppositeEnd.distanceTo(new Vector3(...target.position))).toBeCloseTo(40);
   });
+
+  it.each(['plate-1x6', 'cylinder'])(
+    'uses a triangle slope connector to change the orientation of %s',
+    (definitionId) => {
+      const triangle = getBrickDefinition('triangle-prism');
+      const movingDefinition = getBrickDefinition(definitionId);
+      if (!triangle || !movingDefinition) throw new Error('Expected catalog definitions.');
+      const fixed = instance('triangle', triangle.id, [0, 10, 0]);
+      const moving = instance('moving', movingDefinition.id, [0, 30, 0]);
+      const slopeTargets = getWorldConnectors(fixed, triangle).filter(({ connectorId }) => (
+        connectorId.includes('slope')
+      ));
+
+      const candidate = findBestSnap({
+        dragged: moving,
+        draggedDefinition: movingDefinition,
+        targets: slopeTargets,
+        // DragInteraction resolves pointer proximity in screen space. Keeping
+        // that concern out of this test lets it focus on the exact 3D result.
+        distanceResolver: () => 0,
+      });
+
+      expect(candidate).not.toBeNull();
+      expect(candidate?.committable).toBe(true);
+      expect(isSlopedSnapCandidate(candidate!)).toBe(true);
+      expect(isBrickOnGrid({
+        ...moving,
+        position: candidate!.transform.position,
+        rotation: candidate!.transform.rotation,
+      })).toBe(false);
+      expect(isSnapPlacementGridCompatible(candidate!, {
+        ...moving,
+        position: candidate!.transform.position,
+        rotation: candidate!.transform.rotation,
+      })).toBe(true);
+
+      const alignedSource = getWorldConnectors({
+        ...moving,
+        position: candidate!.transform.position,
+        rotation: candidate!.transform.rotation,
+      }, movingDefinition).find(({ connectorId }) => (
+        connectorId === candidate!.draggedConnectorId
+      ));
+      expect(alignedSource).toBeDefined();
+      expect(new Vector3(...alignedSource!.position).distanceTo(
+        new Vector3(...candidate!.target.position),
+      )).toBeCloseTo(0, 8);
+      expect(new Vector3(...alignedSource!.normal).dot(
+        new Vector3(...candidate!.target.normal),
+      )).toBeCloseTo(-1, 8);
+      expect(candidate!.transform.rotation.some((angle) => Math.abs(angle) > 0.1)).toBe(true);
+    },
+  );
 
   it('can use an interaction-space distance while keeping exact world alignment', () => {
     const source = connector({
