@@ -16,6 +16,7 @@ import {
 } from '../editor/projectModel';
 import type { DropResult } from '../editor/gravity/dropEngine';
 import { keepAssemblyAboveBed, keepBrickAboveBed } from '../editor/gravity/dropEngine';
+import { snapBrickToGrid } from '../editor/grid/gridEngine';
 import type { SnapCandidate } from '../editor/snapping/snapEngine';
 import type {
   BrickInstance,
@@ -108,7 +109,22 @@ const cloneBrick = (brick: BrickInstance): BrickInstance => ({
   rotation: [...brick.rotation],
 });
 
-const safeBrick = (brick: BrickInstance): BrickInstance => keepBrickAboveBed(cloneBrick(brick));
+const safeBrick = (brick: BrickInstance): BrickInstance =>
+  keepBrickAboveBed(snapBrickToGrid(cloneBrick(brick)));
+
+const normaliseProject = (
+  bricks: readonly BrickInstance[],
+  connections: readonly Connection[],
+): ProjectSnapshot => {
+  const alignedBricks = keepAssemblyAboveBed(bricks.map(safeBrick));
+  const validConnections: Connection[] = [];
+  for (const connection of connections) {
+    if (isConnectionValid(connection, alignedBricks, validConnections)) {
+      validConnections.push({ ...connection });
+    }
+  }
+  return { bricks: alignedBricks, connections: validConnections };
+};
 
 const snapshotOf = (state: Pick<EditorStore, 'bricks' | 'connections'>): ProjectSnapshot =>
   cloneProjectSnapshot({ bricks: state.bricks, connections: state.connections });
@@ -279,9 +295,10 @@ export const useEditorStore = create<EditorStore>((set, get) => ({
       const previous = state.past.at(-1);
       if (!previous) return state;
       const restored = cloneProjectSnapshot(previous);
+      const normalised = normaliseProject(restored.bricks, restored.connections);
       return {
-        bricks: keepAssemblyAboveBed(restored.bricks),
-        connections: restored.connections,
+        bricks: normalised.bricks,
+        connections: normalised.connections,
         selectedId: null,
         past: state.past.slice(0, -1),
         future: [snapshotOf(state), ...state.future].slice(0, HISTORY_LIMIT),
@@ -295,9 +312,10 @@ export const useEditorStore = create<EditorStore>((set, get) => ({
       const next = state.future[0];
       if (!next) return state;
       const restored = cloneProjectSnapshot(next);
+      const normalised = normaliseProject(restored.bricks, restored.connections);
       return {
-        bricks: keepAssemblyAboveBed(restored.bricks),
-        connections: restored.connections,
+        bricks: normalised.bricks,
+        connections: normalised.connections,
         selectedId: null,
         past: appendHistory(state.past, snapshotOf(state)),
         future: state.future.slice(1),
@@ -328,11 +346,12 @@ export const useEditorStore = create<EditorStore>((set, get) => ({
         return false;
       }
       const project = deserializeProject(serialized);
+      const normalised = normaliseProject(project.bricks, project.connections);
       set((state) =>
         withCommittedProject(
           state,
-          keepAssemblyAboveBed(project.bricks),
-          project.connections.map((connection) => ({ ...connection })),
+          normalised.bricks,
+          normalised.connections,
           { selectedId: null, toast: '作品已载入' },
         ),
       );

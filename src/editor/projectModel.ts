@@ -154,7 +154,10 @@ export const isConnectionValid = (
   return positionError <= 0.75 && normalDot <= -0.98;
 };
 
-const validateProjectValue = (value: unknown): ProjectData => {
+const validateProjectValue = (
+  value: unknown,
+  dropMisalignedConnections = false,
+): ProjectData => {
   if (!isRecord(value) || value.version !== PROJECT_VERSION) {
     throw new Error(`Invalid project: expected schema version ${PROJECT_VERSION}.`);
   }
@@ -170,6 +173,7 @@ const validateProjectValue = (value: unknown): ProjectData => {
   for (const rawConnection of value.connections) {
     const connection = parseConnection(rawConnection, bricksById, seenConnections);
     if (!isConnectionValid(connection, bricks, connections)) {
+      if (dropMisalignedConnections) continue;
       throw new Error('Invalid project: incompatible, occupied, or misaligned connection.');
     }
     connections.push(connection);
@@ -213,7 +217,10 @@ export const deserializeProject = (serialized: string): ProjectData => {
   } catch {
     throw new Error('Invalid project: malformed JSON.');
   }
-  return validateProjectValue(parsed);
+  // Catalog geometry and connector positions may become stricter over time.
+  // Preserve every brick from an older local project and discard only logical
+  // edges that no longer describe a real aligned connection.
+  return validateProjectValue(parsed, true);
 };
 
 export const cloneProjectSnapshot = (project: ProjectSnapshot): ProjectSnapshot => ({

@@ -179,6 +179,29 @@ describe('findBestSnap', () => {
     });
   });
 
+  it('lets the editor reject an otherwise valid off-grid transform', () => {
+    const source = connector({
+      id: 'bottom',
+      type: 'socket',
+      compatibleWith: ['stud'],
+      polarity: 'female',
+      rotation: [0, 0, HALF_TURN],
+    });
+    const draggedDefinition = definition('dragged-grid', [source]);
+    const targetDefinition = definition('target-grid', [connector({ id: 'top' })]);
+    const targets = getWorldConnectors(
+      instance('off-grid-target', 'target-grid', [1, 0, 0]),
+      targetDefinition,
+    );
+
+    expect(findBestSnap({
+      dragged: instance('moving-grid', 'dragged-grid'),
+      draggedDefinition,
+      targets,
+      transformValidator: ({ position }) => position[0] % 10 === 0,
+    })).toBeNull();
+  });
+
   it('allows a long brick to overhang when only one end connector mates', () => {
     const endSocket = connector({
       id: 'end-socket',

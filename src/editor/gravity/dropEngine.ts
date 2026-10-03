@@ -1,12 +1,12 @@
-import { Box3, Mesh, Object3D, Vector3 } from 'three';
+import { Box3 } from 'three';
 
-import { getBrickDefinition } from '../../bricks/catalog';
-import { createBrickGroup } from '../../bricks/geometry';
+import { BRICK_LAYER } from '../../config/brickConfig';
 import type {
   BrickInstance,
   EulerTuple,
   Vec3Tuple,
 } from '../../types/model';
+import { getBrickBodyBounds, quantizeToGrid, snapBrickToGrid } from '../grid/gridEngine';
 
 export type XZPoint = [x: number, z: number];
 
@@ -22,7 +22,7 @@ export interface XZContactRegion {
 }
 
 export interface DropResult {
-  /** Final body transform position. X and Z always equal the input values. */
+  /** Final body transform position on the horizontal and vertical grids. */
   position: Vec3Tuple;
   /** Rotation is returned unchanged so callers can apply one complete transform. */
   rotation: EulerTuple;
@@ -38,11 +38,10 @@ interface SupportCandidate {
 }
 
 const DROP_EPSILON = 1e-7;
-const rotatedBodyBounds = new Map<string, Box3>();
 
 export function isBrickAboveBed(brick: BrickInstance, bedY = 0): boolean {
   if (!Number.isFinite(bedY)) throw new RangeError('bedY must be a finite number.');
-  return getBodyWorldBounds(brick).min.y >= bedY - DROP_EPSILON;
+  return getBrickBodyBounds(brick).min.y >= bedY - DROP_EPSILON;
 }
 
 /**
@@ -52,7 +51,7 @@ export function isBrickAboveBed(brick: BrickInstance, bedY = 0): boolean {
  */
 export function keepBrickAboveBed(brick: BrickInstance, bedY = 0): BrickInstance {
   if (!Number.isFinite(bedY)) throw new RangeError('bedY must be a finite number.');
-  const bounds = getBodyWorldBounds(brick);
+  const bounds = getBrickBodyBounds(brick);
   const lift = Math.max(0, bedY - bounds.min.y);
   return {
     ...brick,
@@ -68,7 +67,7 @@ export function keepAssemblyAboveBed(
 ): BrickInstance[] {
   if (!Number.isFinite(bedY)) throw new RangeError('bedY must be a finite number.');
   if (bricks.length === 0) return [];
-  const lowestY = Math.min(...bricks.map((brick) => getBodyWorldBounds(brick).min.y));
+  const lowestY = Math.min(...bricks.map((brick) => getBrickBodyBounds(brick).min.y));
   const lift = Math.max(0, bedY - lowestY);
   return bricks.map((brick) => ({
     ...brick,
@@ -92,7 +91,8 @@ export function computeDropPlacement(
     throw new RangeError('bedY must be a finite number.');
   }
 
-  const draggedBounds = getBodyWorldBounds(dragged);
+  const alignedDragged = snapBrickToGrid(dragged);
+  const draggedBounds = getBrickBodyBounds(alignedDragged);
   const bedContact = footprintRegion(draggedBounds);
   let supportY = bedY;
   let supportBrickId: string | null = null;
@@ -102,7 +102,7 @@ export function computeDropPlacement(
   for (const other of others) {
     if (other.id === dragged.id) continue;
 
-    const otherBounds = getBodyWorldBounds(other);
+    const otherBounds = getBrickBodyBounds(other);
     // Gravity only moves downward. A body whose top is above the currently
     // held brick cannot become a landing surface for this release.
     if (otherBounds.max.y > draggedBounds.min.y + DROP_EPSILON) continue;
@@ -119,50 +119,22 @@ export function computeDropPlacement(
   candidates.sort(compareSupports);
   const highest = candidates[0];
   if (highest && highest.topY > bedY + DROP_EPSILON) {
-    supportY = highest.topY;
+    supportY = quantizeToGrid(highest.topY, BRICK_LAYER);
     supportBrickId = highest.brickId;
     contact = highest.contact;
   }
 
   const finalY = cleanNearZero(
-    dragged.position[1] + supportY - draggedBounds.min.y,
+    alignedDragged.position[1] + supportY - draggedBounds.min.y,
   );
 
   return {
-    position: [dragged.position[0], finalY, dragged.position[2]],
-    rotation: [...dragged.rotation],
+    position: [alignedDragged.position[0], finalY, alignedDragged.position[2]],
+    rotation: [...alignedDragged.rotation],
     supportY: cleanNearZero(supportY),
     supportBrickId,
     contact,
   };
-}
-
-function getBodyWorldBounds(instance: BrickInstance): Box3 {
-  const definition = getBrickDefinition(instance.definitionId);
-  if (!definition) {
-    throw new Error(`Unknown brick definition: ${instance.definitionId}`);
-  }
-
-  const rotationKey = instance.rotation.map((value) => value.toFixed(8)).join(':');
-  const cacheKey = `${definition.id}:${rotationKey}`;
-  let originBounds = rotatedBodyBounds.get(cacheKey);
-  if (!originBounds) {
-    const group = createBrickGroup(definition, {
-      includeConnectorGeometry: false,
-    });
-    try {
-      group.rotation.set(...instance.rotation, 'XYZ');
-      group.updateMatrixWorld(true);
-      originBounds = new Box3().setFromObject(group, true);
-      if (originBounds.isEmpty()) {
-        throw new Error(`Brick definition has no body geometry: ${definition.id}`);
-      }
-      rotatedBodyBounds.set(cacheKey, originBounds.clone());
-    } finally {
-      disposeObject(group);
-    }
-  }
-  return originBounds.clone().translate(new Vector3(...instance.position));
 }
 
 function footprintRegion(bounds: Box3): XZContactRegion {
@@ -229,17 +201,6 @@ function compareSupports(
   if (first.brickId < second.brickId) return -1;
   if (first.brickId > second.brickId) return 1;
   return 0;
-}
-
-function disposeObject(root: Object3D): void {
-  root.traverse((child) => {
-    if (!(child instanceof Mesh)) return;
-    child.geometry.dispose();
-    const materials = Array.isArray(child.material)
-      ? child.material
-      : [child.material];
-    materials.forEach((material) => material.dispose());
-  });
 }
 
 function cleanNearZero(value: number): number {

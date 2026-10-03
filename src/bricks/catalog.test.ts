@@ -39,7 +39,7 @@ describe('brick catalog', () => {
     const magnets = definition.connectors.filter(
       (connector) => connector.type === 'magnet',
     );
-    expect(magnets).toHaveLength(4);
+    expect(magnets).toHaveLength(12);
     expect(
       magnets.every((connector) => connector.polarity === 'neutral'),
     ).toBe(true);

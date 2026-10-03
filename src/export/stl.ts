@@ -17,6 +17,7 @@ import { mergeVertices } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 
 import { getBrickDefinition } from '../bricks/catalog';
 import { createBrickGroup } from '../bricks/geometry';
+import { snapBrickToGrid } from '../editor/grid/gridEngine';
 import type { BrickInstance } from '../types/model';
 
 const MANIFOLD_WELD_TOLERANCE_MM = 1e-5;
@@ -49,13 +50,14 @@ export function createPrintableAssembly(bricks: BrickInstance[]): Group {
   for (const brick of bricks) {
     const definition = getBrickDefinition(brick.definitionId);
     if (!definition) continue;
+    const alignedBrick = snapBrickToGrid(brick);
     const object = createBrickGroup(definition, {
-      color: brick.color ?? definition.color,
+      color: alignedBrick.color ?? definition.color,
       includeConnectorGeometry: false,
     });
-    object.name = `${definition.id}-${brick.id}`;
-    object.position.set(...brick.position);
-    object.rotation.set(...brick.rotation);
+    object.name = `${definition.id}-${alignedBrick.id}`;
+    object.position.set(...alignedBrick.position);
+    object.rotation.set(...alignedBrick.rotation);
     assembly.add(object);
   }
 

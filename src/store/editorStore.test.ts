@@ -84,9 +84,9 @@ describe('editor store', () => {
 
     useEditorStore.getState().commitDrag();
     expect(useEditorStore.getState().bricks[0].position).toEqual([
-      30,
+      35,
       definition.size[1] / 2,
-      20,
+      25,
     ]);
     expect(useEditorStore.getState().past).toHaveLength(1);
     expect(useEditorStore.getState().drag).toBeNull();
@@ -104,7 +104,7 @@ describe('editor store', () => {
     useEditorStore.getState().commitDrag();
 
     expect(useEditorStore.getState().bricks).toHaveLength(2);
-    expect(useEditorStore.getState().bricks[1].position).toEqual([0, 15, 0]);
+    expect(useEditorStore.getState().bricks[1].position).toEqual([5, 15, 5]);
     expect(useEditorStore.getState().connections).toEqual([]);
   });
 
@@ -158,6 +158,6 @@ describe('editor store', () => {
     );
     useEditorStore.getState().commitDrag();
 
-    expect(useEditorStore.getState().bricks[0].position).toEqual([12, 5, 4]);
+    expect(useEditorStore.getState().bricks[0].position).toEqual([15, 5, 5]);
   });
 });

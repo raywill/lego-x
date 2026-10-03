@@ -1,10 +1,12 @@
 export const BRICK_UNIT = 10;
+export const BRICK_LAYER = BRICK_UNIT / 2;
 
 export const BRICK_CONFIG = {
   unit: BRICK_UNIT,
-  plateHeight: BRICK_UNIT * 0.5,
-  discHeight: BRICK_UNIT * 0.4,
-  rodRadius: BRICK_UNIT * 0.2,
+  layer: BRICK_LAYER,
+  plateHeight: BRICK_LAYER,
+  discHeight: BRICK_LAYER,
+  rodRadius: BRICK_UNIT * 0.5,
   studRadius: BRICK_UNIT * 0.27,
   studHeight: BRICK_UNIT * 0.18,
   snapDistance: BRICK_UNIT * 0.68,

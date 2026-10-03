@@ -93,4 +93,20 @@ describe('project model', () => {
       deserializeProject(JSON.stringify({ version: 999, bricks: [], connections: [] })),
     ).toThrow(/schema version/i);
   });
+
+  it('keeps legacy bricks while dropping a no-longer-aligned connection', () => {
+    const stud = definition.connectors.find((connector) => connector.type === 'stud');
+    const socket = definition.connectors.find((connector) => connector.type === 'socket');
+    if (!stud || !socket) throw new Error('The test brick needs a stud and socket.');
+    const bricks = [makeBrick('a'), makeBrick('b', [37, 42, 13])];
+
+    const loaded = deserializeProject(JSON.stringify({
+      version: PROJECT_VERSION,
+      bricks,
+      connections: [createConnection('a', stud.id, 'b', socket.id)],
+    }));
+
+    expect(loaded.bricks).toEqual(bricks);
+    expect(loaded.connections).toEqual([]);
+  });
 });

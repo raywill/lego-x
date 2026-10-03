@@ -73,6 +73,8 @@ export interface FindBestSnapInput {
    * snap thresholds while the final transform remains exact world geometry.
    */
   distanceResolver?: (source: WorldConnector, target: WorldConnector) => number;
+  /** Optional editor constraint, such as requiring the final body to be on a placement grid. */
+  transformValidator?: (transform: SnapTransform) => boolean;
 }
 
 export const DEFAULT_SNAP_ENGINE_CONFIG: Readonly<SnapEngineConfig> = {
@@ -167,6 +169,7 @@ export function findBestSnap({
   occupiedConnectorKeys = new Set<string>(),
   config: configOverrides,
   distanceResolver,
+  transformValidator,
 }: FindBestSnapInput): SnapCandidate | null {
   const config: SnapEngineConfig = {
     ...DEFAULT_SNAP_ENGINE_CONFIG,
@@ -224,6 +227,7 @@ export function findBestSnap({
         bestOrientation.desiredSourceQuaternion,
         config.epsilon,
       );
+      if (transformValidator && !transformValidator(transform)) continue;
       const score =
         distanceMm +
         bestOrientation.angularCorrectionRad * config.angularWeightMmPerRad;

@@ -37,7 +37,7 @@ function OnboardingHint() {
       {count === 0 ? (
         <><strong>拖一个积木进来</strong><span>从左边选一个喜欢的形状</span></>
       ) : (
-        <><strong>拖到上方，松手会落下</strong><span>深色面是落点 · <b>●</b> 靠近 <b>○</b> 会卡住</span></>
+        <><strong>拖到上方，松手会落下</strong><span>自动对齐格子 · <b>●</b> 靠近 <b>○</b> 会卡住</span></>
       )}
     </div>
   );
@@ -126,7 +126,7 @@ export function App() {
           <SelectionToolbar />
           <div className="bed-label">
             <span className="bed-dot" />
-            <span>打印底板 {PRINT_BED.width} × {PRINT_BED.depth} mm</span>
+            <span>打印底板 · 每格 1×1 · {PRINT_BED.width} × {PRINT_BED.depth} mm</span>
           </div>
           <div className="scene-count" aria-label={`${bricks.length}块积木，${connections.length}处连接`}>
             <Layers3 size={15} /><span>{bricks.length} 块</span><i /><span>{connections.length} 处卡接</span>

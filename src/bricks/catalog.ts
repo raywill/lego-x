@@ -1,6 +1,6 @@
 import { Euler, Quaternion, Vector3 } from 'three';
 
-import { BRICK_CONFIG, BRICK_UNIT } from '../config/brickConfig';
+import { BRICK_CONFIG, BRICK_LAYER, BRICK_UNIT } from '../config/brickConfig';
 import type {
   Axis,
   BrickDefinition,
@@ -222,7 +222,8 @@ export function createSideMagnetConnectors(
   columnsX: number,
   columnsZ: number,
 ): ConnectorDefinition[] {
-  return [
+  const verticalRows = Math.max(1, Math.round(size[1] / BRICK_LAYER));
+  const centerConnectors = [
     ...createConnectorGrid({
       face: 'left',
       type: 'magnet',
@@ -255,6 +256,24 @@ export function createSideMagnetConnectors(
       rows: 1,
       idPrefix: 'side-back-magnet',
     }),
+  ];
+  if (verticalRows === 1) return centerConnectors;
+
+  const layered = (face: ConnectorFace, columns: number) => createConnectorGrid({
+    face,
+    type: 'magnet',
+    size,
+    columns,
+    rows: verticalRows,
+    pitchV: BRICK_LAYER,
+    idPrefix: `side-${face}-magnet-layer`,
+  });
+  return [
+    ...centerConnectors,
+    ...layered('left', columnsZ),
+    ...layered('right', columnsZ),
+    ...layered('front', columnsX),
+    ...layered('back', columnsX),
   ];
 }
 
@@ -343,11 +362,11 @@ const trapezoidSize: Vec3Tuple = [3 * U, U, 2 * U];
 const halfCylinderSize: Vec3Tuple = [3 * U, U, 2 * U];
 const hemisphereSize: Vec3Tuple = [2 * U, U, 2 * U];
 const sphereSize: Vec3Tuple = [2 * U, 2 * U, 2 * U];
-const wheelSize: Vec3Tuple = [U * 0.6, 3 * U, 3 * U];
+const wheelSize: Vec3Tuple = [U, 3 * U, 3 * U];
 const axleSize: Vec3Tuple = [5 * U, ROD_DIAMETER, ROD_DIAMETER];
 const hingeSize: Vec3Tuple = [2 * U, U, 2 * U];
-const largeWheelSize: Vec3Tuple = [U * 0.8, 5 * U, 5 * U];
-const handleSize: Vec3Tuple = [PLATE, 3 * U, 3 * U];
+const largeWheelSize: Vec3Tuple = [U, 5 * U, 5 * U];
+const handleSize: Vec3Tuple = [U, 3 * U, 3 * U];
 
 const beamSideHoles = [
   ...createConnectorGrid({
@@ -394,11 +413,11 @@ const wheelGeometry = {
   kind: 'compound',
   parts: [
     {
-      geometry: { kind: 'torus', majorRadius: U * 1.2, tubeRadius: U * 0.3, axis: 'x' },
+      geometry: { kind: 'torus', majorRadius: U, tubeRadius: U * 0.5, axis: 'x' },
       color: '#27324a',
     },
     {
-      geometry: { kind: 'cylinder', radius: U * 0.42, length: U * 0.6, axis: 'x' },
+      geometry: { kind: 'cylinder', radius: U * 0.42, length: U, axis: 'x' },
     },
     { geometry: { kind: 'box', size: [U * 0.52, U * 0.2, U * 2.2] } },
     {
@@ -412,11 +431,11 @@ const largeWheelGeometry = {
   kind: 'compound',
   parts: [
     {
-      geometry: { kind: 'torus', majorRadius: U * 2.1, tubeRadius: U * 0.4, axis: 'x' },
+      geometry: { kind: 'torus', majorRadius: U * 2, tubeRadius: U * 0.5, axis: 'x' },
       color: '#263044',
     },
     {
-      geometry: { kind: 'cylinder', radius: U * 0.5, length: U * 0.8, axis: 'x' },
+      geometry: { kind: 'cylinder', radius: U * 0.5, length: U, axis: 'x' },
     },
     { geometry: { kind: 'box', size: [U * 0.7, U * 0.28, U * 3.8] } },
     {
@@ -428,16 +447,16 @@ const largeWheelGeometry = {
 
 const handleParts: Extract<BrickDefinition['geometry'], { kind: 'compound' }>['parts'] = [
   {
-    geometry: { kind: 'torus', majorRadius: U * 1.28, tubeRadius: U * 0.22, axis: 'x' },
+    geometry: { kind: 'torus', majorRadius: U, tubeRadius: U * 0.5, axis: 'x' },
   },
   {
-    geometry: { kind: 'cylinder', radius: U * 0.3, length: PLATE, axis: 'x' },
+    geometry: { kind: 'cylinder', radius: U * 0.3, length: U, axis: 'x' },
   },
 ];
 for (const angle of [0, (Math.PI * 2) / 3, (Math.PI * 4) / 3]) {
   const radialCenter = U * 0.69;
   handleParts.push({
-    geometry: { kind: 'box', size: [PLATE * 0.8, U * 0.18, U * 1.38] },
+    geometry: { kind: 'box', size: [U * 0.8, U * 0.2, U * 1.5] },
     position: [
       0,
       -Math.sin(angle) * radialCenter,
@@ -744,25 +763,26 @@ export const BRICK_DEFINITIONS: BrickDefinition[] = [
       kind: 'compound',
       parts: [
         {
-          geometry: { kind: 'box', size: [2 * U, U * 0.3, U * 1.2] },
-          position: [0, -U * 0.35, U * 0.2],
+          geometry: { kind: 'box', size: [2 * U, U * 0.5, U] },
+          position: [0, -U * 0.25, U * 0.5],
         },
         {
-          geometry: { kind: 'box', size: [2 * U, U, U * 0.3] },
-          position: [0, 0, -U * 0.45],
+          geometry: { kind: 'box', size: [2 * U, U, U * 0.5] },
+          position: [0, 0, -U * 0.75],
         },
         {
-          geometry: { kind: 'cylinder', radius: U * 0.3, length: 2 * U, axis: 'x' },
-          position: [0, U * 0.15, -U * 0.3],
+          geometry: { kind: 'cylinder', radius: U * 0.25, length: 2 * U, axis: 'x' },
+          position: [0, 0, -U * 0.25],
         },
       ],
     },
     connectors: [
-      slopeConnector('leaf-top-stud-0', [-U / 2, -U * 0.2, U * 0.2], [0, 1, 0]),
-      slopeConnector('leaf-top-stud-1', [U / 2, -U * 0.2, U * 0.2], [0, 1, 0]),
-      createOrientedConnector('leaf-bottom-socket-0', 'socket', [-U / 2, -U / 2, U * 0.2], [0, -1, 0]),
-      createOrientedConnector('leaf-bottom-socket-1', 'socket', [U / 2, -U / 2, U * 0.2], [0, -1, 0]),
-      ...createAxisPair(hingeSize, 'x', 'hinge'),
+      slopeConnector('leaf-top-stud-0', [-U / 2, 0, U / 2], [0, 1, 0]),
+      slopeConnector('leaf-top-stud-1', [U / 2, 0, U / 2], [0, 1, 0]),
+      createOrientedConnector('leaf-bottom-socket-0', 'socket', [-U / 2, -U / 2, U / 2], [0, -1, 0]),
+      createOrientedConnector('leaf-bottom-socket-1', 'socket', [U / 2, -U / 2, U / 2], [0, -1, 0]),
+      createFaceConnector('hinge-x-negative', 'hinge', 'left', hingeSize, -U / 4),
+      createFaceConnector('hinge-x-positive', 'hinge', 'right', hingeSize, -U / 4),
     ],
   },
   {
