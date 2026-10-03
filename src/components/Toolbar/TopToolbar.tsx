@@ -1,6 +1,13 @@
 import { ChevronDown, Download, FolderOpen, LoaderCircle, RotateCcw, RotateCw, Save, Sparkles } from 'lucide-react';
 import { type ChangeEvent, useEffect, useRef, useState } from 'react';
-import { downloadLegoxFile, isLegoxFilename } from '../../editor/projectFile';
+import {
+  LEGOX_DEFAULT_FILENAME,
+  isLegoxFilename,
+  isSavePickerCancellation,
+  saveLegoxFile,
+  supportsLegoxSavePicker,
+  withLegoxExtension,
+} from '../../editor/projectFile';
 import { downloadStl } from '../../export/stl';
 import { useEditorStore } from '../../store/editorStore';
 
@@ -19,6 +26,7 @@ type PrintScale = (typeof printScales)[number]['value'];
 
 export function TopToolbar() {
   const [exporting, setExporting] = useState(false);
+  const [savingProjectFile, setSavingProjectFile] = useState(false);
   const [printMenuOpen, setPrintMenuOpen] = useState(false);
   const printMenuRef = useRef<HTMLDivElement>(null);
   const projectFileRef = useRef<HTMLInputElement>(null);
@@ -70,13 +78,26 @@ export function TopToolbar() {
     }
   };
 
-  const saveProjectFile = () => {
+  const saveProjectFile = async () => {
+    if (savingProjectFile) return;
+    let filename = LEGOX_DEFAULT_FILENAME;
+    if (!supportsLegoxSavePicker()) {
+      const requestedName = window.prompt('给作品起个名字', LEGOX_DEFAULT_FILENAME);
+      if (requestedName === null) return;
+      filename = withLegoxExtension(requestedName);
+    }
+    setSavingProjectFile(true);
     try {
+      const method = await saveLegoxFile({ bricks, connections }, filename);
       saveProject();
-      downloadLegoxFile({ bricks, connections });
-      setToast('.legox 作品文件已保存');
-    } catch {
+      setToast(method === 'picker'
+        ? '作品已保存到你选择的位置'
+        : `${filename} 已下载`);
+    } catch (error) {
+      if (isSavePickerCancellation(error)) return;
       setToast('作品文件保存失败，请再试一次');
+    } finally {
+      setSavingProjectFile(false);
     }
   };
 
@@ -122,7 +143,16 @@ export function TopToolbar() {
         <span className="toolbar-divider" />
         <div className="action-group project-actions">
           <button type="button" onClick={startNew} aria-label="新建作品" title="清空画板，开始新作品"><Sparkles size={18} />{showLabel('新建')}</button>
-          <button type="button" onClick={saveProjectFile} aria-label="保存 legox 作品文件" title="下载 .legox 作品文件"><Save size={18} />{showLabel('保存')}</button>
+          <button
+            type="button"
+            onClick={() => void saveProjectFile()}
+            disabled={savingProjectFile}
+            aria-label={savingProjectFile ? '正在保存 legox 作品文件' : '另存为 legox 作品文件'}
+            title="设置文件名和保存位置"
+          >
+            {savingProjectFile ? <LoaderCircle className="is-spinning" size={18} /> : <Save size={18} />}
+            {showLabel(savingProjectFile ? '保存中' : '保存')}
+          </button>
           <button type="button" onClick={() => projectFileRef.current?.click()} aria-label="打开 legox 作品文件" title="从电脑打开 .legox 作品文件"><FolderOpen size={18} />{showLabel('打开')}</button>
           <input
             ref={projectFileRef}
