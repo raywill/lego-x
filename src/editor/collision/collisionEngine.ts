@@ -1,7 +1,7 @@
 import { Box3, Euler, Quaternion, Vector3 } from 'three';
 
 import { getBrickDefinition } from '../../bricks/catalog';
-import { BRICK_LAYER, BRICK_UNIT } from '../../config/brickConfig';
+import { BRICK_LAYER, PLACEMENT_GRID } from '../../config/brickConfig';
 import type { BrickInstance } from '../../types/model';
 import { getBrickBodyBounds, snapBrickToGrid } from '../grid/gridEngine';
 
@@ -148,9 +148,9 @@ export function findNearestFreeGridPlacement(
         const candidate: BrickInstance = {
           ...origin,
           position: [
-            origin.position[0] + x * BRICK_UNIT,
+            origin.position[0] + x * PLACEMENT_GRID,
             origin.position[1],
-            origin.position[2] + z * BRICK_UNIT,
+            origin.position[2] + z * PLACEMENT_GRID,
           ],
           rotation: [...origin.rotation],
         };

@@ -6,6 +6,8 @@ import {
   findNearestFreeGridPlacement,
   separateOverlappingBricks,
 } from './collisionEngine';
+import { getBrickBodyBounds, isGridMultiple } from '../grid/gridEngine';
+import { PLACEMENT_GRID } from '../../config/brickConfig';
 
 function cube(id: string, position: BrickInstance['position']): BrickInstance {
   return { id, definitionId: 'cube-1', position, rotation: [0, 0, 0] };
@@ -37,6 +39,28 @@ describe('brick collision constraints', () => {
 
     expect(bricksOverlap(original, duplicate)).toBe(false);
     expect(duplicate.position).not.toEqual(original.position);
+  });
+
+  it('uses the half-grid when it is the nearest free non-overlapping position', () => {
+    const original = brick(
+      'original',
+      'plate-1x2',
+      [2.5, 10, 5],
+      [0, 0, Math.PI / 2],
+    );
+    const duplicate = findNearestFreeGridPlacement(
+      { ...original, id: 'copy' },
+      [original],
+    );
+    const bounds = getBrickBodyBounds(duplicate);
+
+    expect(bricksOverlap(original, duplicate)).toBe(false);
+    expect(isGridMultiple(bounds.min.x, PLACEMENT_GRID)).toBe(true);
+    expect(isGridMultiple(bounds.min.z, PLACEMENT_GRID)).toBe(true);
+    expect(Math.max(
+      Math.abs(duplicate.position[0] - original.position[0]),
+      Math.abs(duplicate.position[2] - original.position[2]),
+    )).toBe(PLACEMENT_GRID);
   });
 
   it('repairs overlapping legacy bricks by lifting later bodies', () => {

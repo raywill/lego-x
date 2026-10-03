@@ -1,6 +1,6 @@
 import { useEffect, useMemo } from 'react';
 import { CanvasTexture, DoubleSide, LinearFilter, SRGBColorSpace } from 'three';
-import { BRICK_UNIT, PRINT_BED } from '../../config/brickConfig';
+import { PLACEMENT_GRID, PRINT_BED } from '../../config/brickConfig';
 
 function createBedTexture(): CanvasTexture {
   const pixelsPerMillimeter = 2;
@@ -12,7 +12,7 @@ function createBedTexture(): CanvasTexture {
 
   context.fillStyle = '#eef2f8';
   context.fillRect(0, 0, canvas.width, canvas.height);
-  const step = BRICK_UNIT * pixelsPerMillimeter;
+  const step = PLACEMENT_GRID * pixelsPerMillimeter;
   const line = (x1: number, y1: number, x2: number, y2: number, color: string, width: number) => {
     context.beginPath();
     context.moveTo(x1, y1);
@@ -23,12 +23,28 @@ function createBedTexture(): CanvasTexture {
   };
 
   for (let x = 0, index = 0; x <= canvas.width; x += step, index += 1) {
-    const major = index % 5 === 0;
-    line(x, 0, x, canvas.height, major ? '#8b98ad' : '#c1c9d5', major ? 3 : 1.5);
+    const landmark = index % 10 === 0;
+    const wholeBrick = index % 2 === 0;
+    line(
+      x,
+      0,
+      x,
+      canvas.height,
+      landmark ? '#8b98ad' : wholeBrick ? '#bdc6d3' : '#d8dee8',
+      landmark ? 3 : wholeBrick ? 1.5 : 0.8,
+    );
   }
   for (let y = 0, index = 0; y <= canvas.height; y += step, index += 1) {
-    const major = index % 5 === 0;
-    line(0, y, canvas.width, y, major ? '#8b98ad' : '#c1c9d5', major ? 3 : 1.5);
+    const landmark = index % 10 === 0;
+    const wholeBrick = index % 2 === 0;
+    line(
+      0,
+      y,
+      canvas.width,
+      y,
+      landmark ? '#8b98ad' : wholeBrick ? '#bdc6d3' : '#d8dee8',
+      landmark ? 3 : wholeBrick ? 1.5 : 0.8,
+    );
   }
 
   line(0, canvas.height / 2, canvas.width, canvas.height / 2, '#6859d2', 6);

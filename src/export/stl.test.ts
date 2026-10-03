@@ -123,8 +123,8 @@ describe('STL export', () => {
     expect(edgeCounts.every((count) => count === 2)).toBe(true);
 
     const xCoordinates = triangles.flatMap(({ a, b, c }) => [a[0], b[0], c[0]]);
-    expect(Math.min(...xCoordinates)).toBeCloseTo(0, 5);
-    expect(Math.max(...xCoordinates)).toBeCloseTo(20, 5);
+    expect(Math.min(...xCoordinates)).toBeCloseTo(-5, 5);
+    expect(Math.max(...xCoordinates)).toBeCloseTo(15, 5);
   });
 
   it('exports disconnected printable bodies without producing an empty STL', async () => {
@@ -134,8 +134,8 @@ describe('STL export', () => {
     const xCoordinates = triangles.flatMap(({ a, b, c }) => [a[0], b[0], c[0]]);
 
     expect(triangles.length).toBeGreaterThan(0);
-    expect(Math.min(...xCoordinates)).toBeCloseTo(0, 5);
-    expect(Math.max(...xCoordinates)).toBeCloseTo(50, 5);
+    expect(Math.min(...xCoordinates)).toBeCloseTo(-5, 5);
+    expect(Math.max(...xCoordinates)).toBeCloseTo(45, 5);
   });
 
   it.each(['frame-square', 'frame-circle', 'frame-arch'])(
@@ -185,8 +185,8 @@ describe('STL export', () => {
     const xCoordinates = triangles.flatMap(({ a, b, c }) => [a[0], b[0], c[0]]);
     const yCoordinates = triangles.flatMap(({ a, b, c }) => [a[1], b[1], c[1]]);
 
-    expect(Math.min(...xCoordinates)).toBeCloseTo(0, 5);
-    expect(Math.max(...xCoordinates)).toBeCloseTo(10 * scale, 5);
+    expect(Math.min(...xCoordinates)).toBeCloseTo(-5 * scale, 5);
+    expect(Math.max(...xCoordinates)).toBeCloseTo(5 * scale, 5);
     expect(Math.min(...yCoordinates)).toBeCloseTo(0, 5);
     expect(Math.max(...yCoordinates)).toBeCloseTo(10 * scale, 5);
   });

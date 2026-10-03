@@ -1,9 +1,12 @@
 export const BRICK_UNIT = 10;
 export const BRICK_LAYER = BRICK_UNIT / 2;
+/** Smallest legal placement increment after a thin piece is turned upright. */
+export const PLACEMENT_GRID = BRICK_LAYER;
 
 export const BRICK_CONFIG = {
   unit: BRICK_UNIT,
   layer: BRICK_LAYER,
+  placementGrid: PLACEMENT_GRID,
   plateHeight: BRICK_LAYER,
   discHeight: BRICK_LAYER,
   rodRadius: BRICK_UNIT * 0.5,

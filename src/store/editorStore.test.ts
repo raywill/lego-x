@@ -99,6 +99,35 @@ describe('editor store', () => {
     expect(useEditorStore.getState().bricks[0].position).toEqual([5, 5, 5]);
   });
 
+  it('moves a plate by half a cell after flipping it upright', () => {
+    const id = useEditorStore.getState().addBrick('plate-1x2', [0, 2.5, 5]);
+    expect(id).not.toBeNull();
+    useEditorStore.getState().setViewRightAxis([0, 1]);
+    useEditorStore.getState().flipSelected('up');
+    const beforeMove = [...useEditorStore.getState().bricks[0].position];
+
+    expect(useEditorStore.getState().moveSelectedByGridStep([1, 0])).toBe(true);
+    const afterMove = useEditorStore.getState().bricks[0].position;
+    expect(afterMove[0] - beforeMove[0]).toBeCloseTo(5);
+    expect(afterMove[1]).toBeCloseTo(beforeMove[1]);
+    expect(afterMove[2]).toBeCloseTo(beforeMove[2]);
+  });
+
+  it('preserves an exact half-grid transform while opening a project', () => {
+    const serialized = serializeProject({
+      bricks: [{
+        id: 'half-grid',
+        definitionId: 'cube-1',
+        position: [0, 5, 0],
+        rotation: [0, 0, 0],
+      }],
+      connections: [],
+    });
+
+    expect(useEditorStore.getState().importProject(serialized)).toBe(true);
+    expect(useEditorStore.getState().bricks[0].position).toEqual([0, 5, 0]);
+  });
+
   it('changes only the selected brick color and supports undo and redo', () => {
     const firstId = useEditorStore.getState().addBrick('cube-1');
     const secondId = useEditorStore.getState().addBrick('block-1x2');
@@ -215,9 +244,9 @@ describe('editor store', () => {
 
     useEditorStore.getState().commitDrag();
     expect(useEditorStore.getState().bricks[0].position).toEqual([
-      35,
+      30,
       definition.size[1] / 2,
-      25,
+      20,
     ]);
     expect(useEditorStore.getState().past).toHaveLength(1);
     expect(useEditorStore.getState().drag).toBeNull();
@@ -235,7 +264,7 @@ describe('editor store', () => {
     useEditorStore.getState().commitDrag();
 
     expect(useEditorStore.getState().bricks).toHaveLength(2);
-    expect(useEditorStore.getState().bricks[1].position).toEqual([5, 15, 5]);
+    expect(useEditorStore.getState().bricks[1].position).toEqual([0, 15, 0]);
     expect(useEditorStore.getState().connections).toEqual([]);
   });
 

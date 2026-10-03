@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { Vector3 } from 'three';
 
 import { BRICK_DEFINITIONS } from '../../bricks/catalog';
-import { BRICK_LAYER, BRICK_UNIT } from '../../config/brickConfig';
+import { BRICK_LAYER, BRICK_UNIT, PLACEMENT_GRID } from '../../config/brickConfig';
 import type { BrickInstance } from '../../types/model';
 import {
   getBrickBodyBounds,
@@ -30,9 +30,31 @@ describe('integer placement grid', () => {
     const brick = snapBrickToGrid(instance('block-1x2', [8.7, 11.2, 13.1], [0, Math.PI / 2, 0]));
     const bounds = getBrickBodyBounds(brick);
 
-    expect(isGridMultiple(bounds.min.x, BRICK_UNIT)).toBe(true);
+    expect(isGridMultiple(bounds.min.x, PLACEMENT_GRID)).toBe(true);
     expect(isGridMultiple(bounds.min.y, BRICK_LAYER)).toBe(true);
-    expect(isGridMultiple(bounds.min.z, BRICK_UNIT)).toBe(true);
+    expect(isGridMultiple(bounds.min.z, PLACEMENT_GRID)).toBe(true);
+  });
+
+  it('preserves a valid half-grid transform used by connector snapping', () => {
+    const halfGridCube = instance('cube-1', [0, 5, 0]);
+    const snapped = snapBrickToGrid(halfGridCube);
+
+    expect(snapped.position).toEqual(halfGridCube.position);
+    expect(isBrickOnGrid(snapped)).toBe(true);
+    expect(isGridMultiple(getBrickBodyBounds(snapped).min.x, BRICK_UNIT)).toBe(false);
+  });
+
+  it('aligns an upright thin plate to the 5 mm horizontal precision grid', () => {
+    const upright = snapBrickToGrid(instance(
+      'plate-1x2',
+      [3.1, 13.2, 7.7],
+      [0, 0, Math.PI / 2],
+    ));
+    const bounds = getBrickBodyBounds(upright);
+
+    expect(isGridMultiple(bounds.min.x, PLACEMENT_GRID)).toBe(true);
+    expect(isGridMultiple(bounds.min.z, PLACEMENT_GRID)).toBe(true);
+    expect(isBrickOnGrid(upright)).toBe(true);
   });
 
   it.each(BRICK_DEFINITIONS)('$id has a standard nominal and physical envelope', (definition) => {

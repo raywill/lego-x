@@ -2,7 +2,7 @@ import { Box3, Mesh, Object3D, Vector3 } from 'three';
 
 import { getBrickDefinition } from '../../bricks/catalog';
 import { createBrickGroup } from '../../bricks/geometry';
-import { BRICK_LAYER, BRICK_UNIT } from '../../config/brickConfig';
+import { BRICK_LAYER, BRICK_UNIT, PLACEMENT_GRID } from '../../config/brickConfig';
 import type { BrickDefinition, BrickInstance, Vec3Tuple } from '../../types/model';
 
 export interface GridAxes {
@@ -51,9 +51,11 @@ export function getBrickBodyBounds(
 }
 
 /**
- * Snaps the body's minimum corner, not its center. This automatically handles
- * odd/even footprints: a 1x1 center lands half a cell from a grid line while a
- * 2x1 center lands directly on one, and every body edge remains exact.
+ * Snaps the body's minimum corner, not its center. The normal horizontal grid
+ * remains one 10 mm brick unit, while an already exact half-grid transform or
+ * a rotated 5 mm-thick body keeps the 5 mm precision lattice. This preserves
+ * exact connector snaps without making ordinary free placement unnecessarily
+ * fiddly.
  */
 export function snapBrickToGrid(
   brick: BrickInstance,
@@ -62,9 +64,19 @@ export function snapBrickToGrid(
 ): BrickInstance {
   const bounds = getBrickBodyBounds(brick, definition);
   const delta: Vec3Tuple = [0, 0, 0];
-  if (axes.x !== false) delta[0] = quantizeToGrid(bounds.min.x, BRICK_UNIT) - bounds.min.x;
+  if (axes.x !== false) {
+    delta[0] = quantizeToGrid(
+      bounds.min.x,
+      horizontalSnapStep(bounds.min.x, bounds.max.x),
+    ) - bounds.min.x;
+  }
   if (axes.y !== false) delta[1] = quantizeToGrid(bounds.min.y, BRICK_LAYER) - bounds.min.y;
-  if (axes.z !== false) delta[2] = quantizeToGrid(bounds.min.z, BRICK_UNIT) - bounds.min.z;
+  if (axes.z !== false) {
+    delta[2] = quantizeToGrid(
+      bounds.min.z,
+      horizontalSnapStep(bounds.min.z, bounds.max.z),
+    ) - bounds.min.z;
+  }
   return {
     ...brick,
     position: [
@@ -82,9 +94,15 @@ export function isBrickOnGrid(
   definition?: BrickDefinition,
 ): boolean {
   const bounds = getBrickBodyBounds(brick, definition);
-  return (axes.x === false || isGridMultiple(bounds.min.x, BRICK_UNIT))
+  return (axes.x === false || isGridMultiple(bounds.min.x, PLACEMENT_GRID))
     && (axes.y === false || isGridMultiple(bounds.min.y, BRICK_LAYER))
-    && (axes.z === false || isGridMultiple(bounds.min.z, BRICK_UNIT));
+    && (axes.z === false || isGridMultiple(bounds.min.z, PLACEMENT_GRID));
+}
+
+function horizontalSnapStep(min: number, max: number): number {
+  if (isGridMultiple(min, PLACEMENT_GRID)) return PLACEMENT_GRID;
+  const size = max - min;
+  return isGridMultiple(size, BRICK_UNIT, 0.02) ? BRICK_UNIT : PLACEMENT_GRID;
 }
 
 function clean(value: number): number {

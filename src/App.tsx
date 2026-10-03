@@ -126,7 +126,7 @@ export function App() {
           <SelectionToolbar />
           <div className="bed-label">
             <span className="bed-dot" />
-            <span>打印底板 · 每格 1×1 · {PRINT_BED.width} × {PRINT_BED.depth} mm</span>
+            <span>打印底板 · 大格 1×1 · 细线半格 · {PRINT_BED.width} × {PRINT_BED.depth} mm</span>
           </div>
           <div className="scene-count" aria-label={`${bricks.length}块积木，${connections.length}处连接`}>
             <Layers3 size={15} /><span>{bricks.length} 块</span><i /><span>{connections.length} 处卡接</span>

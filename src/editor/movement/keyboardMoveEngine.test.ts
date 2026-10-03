@@ -4,6 +4,7 @@ import type { BrickInstance } from '../../types/model';
 import {
   computeKeyboardMove,
   directionForArrow,
+  getKeyboardMoveStep,
   resolveViewGridAxes,
 } from './keyboardMoveEngine';
 
@@ -39,6 +40,29 @@ describe('view-relative keyboard movement', () => {
 
     expect(result?.brick.position).toEqual([15, 15, 5]);
     expect(result?.fellLayers).toBe(2);
+  });
+
+  it('moves an upright thin plate by half a cell in either horizontal direction', () => {
+    const uprightPlate: BrickInstance = {
+      id: 'upright-plate',
+      definitionId: 'plate-1x2',
+      position: [2.5, 10, 5],
+      rotation: [0, 0, Math.PI / 2],
+    };
+
+    expect(getKeyboardMoveStep(uprightPlate)).toBe(5);
+    const movedRight = computeKeyboardMove(uprightPlate, [], [1, 0])?.brick.position;
+    const movedForward = computeKeyboardMove(uprightPlate, [], [0, 1])?.brick.position;
+    expect(movedRight?.[0]).toBeCloseTo(7.5);
+    expect(movedRight?.slice(1)).toEqual([10, 5]);
+    expect(movedForward?.[0]).toBeCloseTo(2.5);
+    expect(movedForward?.slice(1)).toEqual([10, 10]);
+  });
+
+  it('keeps the normal one-cell step for a full-size block', () => {
+    const selected = cube('regular', [5, 5, 5]);
+    expect(getKeyboardMoveStep(selected)).toBe(10);
+    expect(computeKeyboardMove(selected, [], [1, 0])?.brick.position).toEqual([15, 5, 5]);
   });
 
   it('climbs the minimum number of layers to cross a one-brick obstacle', () => {

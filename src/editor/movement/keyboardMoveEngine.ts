@@ -1,9 +1,10 @@
 import { Vector3 } from 'three';
 
-import { BRICK_LAYER, BRICK_UNIT } from '../../config/brickConfig';
+import { BRICK_LAYER, BRICK_UNIT, PLACEMENT_GRID } from '../../config/brickConfig';
 import type { BrickInstance, Vec3Tuple } from '../../types/model';
 import { hasBrickCollision } from '../collision/collisionEngine';
 import { computeDropPlacement } from '../gravity/dropEngine';
+import { getBrickBodyBounds, isGridMultiple } from '../grid/gridEngine';
 
 export type GridDirection = readonly [x: -1 | 0 | 1, z: -1 | 0 | 1];
 
@@ -68,10 +69,11 @@ export function computeKeyboardMove(
   }
 
   const scene = others.filter((brick) => brick.id !== selected.id);
+  const moveStep = getKeyboardMoveStep(selected);
   const destinationAtCurrentHeight = translated(selected, [
-    direction[0] * BRICK_UNIT,
+    direction[0] * moveStep,
     0,
-    direction[1] * BRICK_UNIT,
+    direction[1] * moveStep,
   ]);
 
   if (!hasBrickCollision(destinationAtCurrentHeight, scene)) {
@@ -96,6 +98,18 @@ export function computeKeyboardMove(
   }
 
   return null;
+}
+
+/**
+ * Upright plates and discs expose a 5 mm horizontal dimension. Move those
+ * pieces on the half-grid in every screen direction so children can line them
+ * up precisely; regular footprints retain the faster 10 mm step.
+ */
+export function getKeyboardMoveStep(selected: BrickInstance): number {
+  const size = getBrickBodyBounds(selected).getSize(new Vector3());
+  const needsHalfGrid = !isGridMultiple(size.x, BRICK_UNIT, 0.02)
+    || !isGridMultiple(size.z, BRICK_UNIT, 0.02);
+  return needsHalfGrid ? PLACEMENT_GRID : BRICK_UNIT;
 }
 
 function landMove(
