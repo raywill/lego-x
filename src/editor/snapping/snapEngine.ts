@@ -74,7 +74,11 @@ export interface FindBestSnapInput {
    */
   distanceResolver?: (source: WorldConnector, target: WorldConnector) => number;
   /** Optional editor constraint, such as requiring the final body to be on a placement grid. */
-  transformValidator?: (transform: SnapTransform) => boolean;
+  transformValidator?: (
+    transform: SnapTransform,
+    target: WorldConnector,
+    source: WorldConnector,
+  ) => boolean;
 }
 
 export const DEFAULT_SNAP_ENGINE_CONFIG: Readonly<SnapEngineConfig> = {
@@ -227,7 +231,7 @@ export function findBestSnap({
         bestOrientation.desiredSourceQuaternion,
         config.epsilon,
       );
-      if (transformValidator && !transformValidator(transform)) continue;
+      if (transformValidator && !transformValidator(transform, target, source)) continue;
       const score =
         distanceMm +
         bestOrientation.angularCorrectionRad * config.angularWeightMmPerRad;

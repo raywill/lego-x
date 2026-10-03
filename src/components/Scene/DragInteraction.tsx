@@ -3,6 +3,7 @@ import { useEffect } from 'react';
 import { MathUtils, PerspectiveCamera, Plane, Raycaster, Vector2, Vector3 } from 'three';
 import { getBrickDefinition } from '../../bricks/catalog';
 import { BRICK_UNIT, PRINT_BED } from '../../config/brickConfig';
+import { hasBrickCollision } from '../../editor/collision/collisionEngine';
 import { computeDropPlacement, isBrickAboveBed } from '../../editor/gravity/dropEngine';
 import { isBrickOnGrid } from '../../editor/grid/gridEngine';
 import {
@@ -38,6 +39,10 @@ function collectTargetConnectors(draggedBrickId: string): WorldConnector[] {
     if (definition) result.push(...getWorldConnectors(brick, definition));
   }
   return result;
+}
+
+function isAxisAligned(normal: readonly number[]): boolean {
+  return normal.filter((component) => Math.abs(component) > 1e-5).length === 1;
 }
 
 function playSnapFeedback(): void {
@@ -196,11 +201,22 @@ export function DragInteraction() {
           const visibleHeight = 2 * Math.tan(MathUtils.degToRad(camera.fov) / 2) * depth;
           return pixels * (visibleHeight / bounds.height);
         },
-        transformValidator: (transform) => isBrickOnGrid({
-          ...landedPreview,
-          position: [...transform.position],
-          rotation: [...transform.rotation],
-        }),
+        transformValidator: (transform, target, source) => {
+          const transformed: BrickInstance = {
+            ...landedPreview,
+            position: [...transform.position],
+            rotation: [...transform.rotation],
+          };
+          // Axis-aligned connectors must pass the full body-overlap check.
+          // Sloped connector pairs are trusted at their exact mating surface,
+          // because their axis-aligned bounds overlap even when the solids do not.
+          const slopedContact = !isAxisAligned(source.normal) || !isAxisAligned(target.normal);
+          const ignoredTargets = slopedContact
+            ? new Set([target.brickId])
+            : new Set<string>();
+          return isBrickOnGrid(transformed)
+            && !hasBrickCollision(transformed, state.bricks, ignoredTargets);
+        },
       });
       const snappedPreview = nearestCandidate?.committable
         ? {

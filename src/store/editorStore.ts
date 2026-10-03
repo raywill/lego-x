@@ -8,6 +8,13 @@ import {
 import { getBrickDefinition } from '../bricks/catalog';
 import { getBrickGroundY } from '../bricks/geometry';
 import {
+  brickPairKey,
+  findNearestFreeGridPlacement,
+  getCollidingBrickIds,
+  hasBrickCollision,
+  separateOverlappingBricks,
+} from '../editor/collision/collisionEngine';
+import {
   cloneProjectSnapshot,
   deserializeProject,
   isConnectionValid,
@@ -17,7 +24,7 @@ import {
 import type { DropResult } from '../editor/gravity/dropEngine';
 import { keepAssemblyAboveBed, keepBrickAboveBed } from '../editor/gravity/dropEngine';
 import { snapBrickToGrid } from '../editor/grid/gridEngine';
-import type { SnapCandidate } from '../editor/snapping/snapEngine';
+import { getWorldConnectors, type SnapCandidate } from '../editor/snapping/snapEngine';
 import type {
   BrickInstance,
   Connection,
@@ -119,13 +126,23 @@ const normaliseProject = (
   connections: readonly Connection[],
 ): ProjectSnapshot => {
   const alignedBricks = keepAssemblyAboveBed(bricks.map(safeBrick));
-  const validConnections: Connection[] = [];
+  const alignedConnections: Connection[] = [];
   for (const connection of connections) {
-    if (isConnectionValid(connection, alignedBricks, validConnections)) {
+    if (isConnectionValid(connection, alignedBricks, alignedConnections)) {
+      alignedConnections.push({ ...connection });
+    }
+  }
+  const connectedPairs = new Set(alignedConnections
+    .filter((connection) => connectionUsesSlopedSurface(connection, alignedBricks))
+    .map((connection) => brickPairKey(connection.brickA, connection.brickB)));
+  const collisionFreeBricks = separateOverlappingBricks(alignedBricks, connectedPairs);
+  const validConnections: Connection[] = [];
+  for (const connection of alignedConnections) {
+    if (isConnectionValid(connection, collisionFreeBricks, validConnections)) {
       validConnections.push({ ...connection });
     }
   }
-  return { bricks: alignedBricks, connections: validConnections };
+  return { bricks: collisionFreeBricks, connections: validConnections };
 };
 
 const snapshotOf = (state: Pick<EditorStore, 'bricks' | 'connections'>): ProjectSnapshot =>
@@ -151,6 +168,29 @@ const connectionKey = (connection: Connection): string => {
   const left = `${connection.brickA}\u0000${connection.connectorA}`;
   const right = `${connection.brickB}\u0000${connection.connectorB}`;
   return left < right ? `${left}\u0001${right}` : `${right}\u0001${left}`;
+};
+
+const isAxisAlignedNormal = (normal: readonly number[]): boolean =>
+  normal.filter((component) => Math.abs(component) > 1e-5).length === 1;
+
+const connectionUsesSlopedSurface = (
+  connection: Connection,
+  bricks: readonly BrickInstance[],
+): boolean => {
+  const brickA = bricks.find((brick) => brick.id === connection.brickA);
+  const brickB = bricks.find((brick) => brick.id === connection.brickB);
+  if (!brickA || !brickB) return false;
+  const definitionA = getBrickDefinition(brickA.definitionId);
+  const definitionB = getBrickDefinition(brickB.definitionId);
+  if (!definitionA || !definitionB) return false;
+  const connectorA = getWorldConnectors(brickA, definitionA)
+    .find((connector) => connector.connectorId === connection.connectorA);
+  const connectorB = getWorldConnectors(brickB, definitionB)
+    .find((connector) => connector.connectorId === connection.connectorB);
+  return Boolean(
+    connectorA && connectorB
+    && (!isAxisAlignedNormal(connectorA.normal) || !isAxisAlignedNormal(connectorB.normal)),
+  );
 };
 
 const validConnection = (
@@ -207,11 +247,12 @@ export const useEditorStore = create<EditorStore>((set, get) => ({
       rotation: [...rotation],
       ...(color === undefined ? {} : { color }),
     });
-    set((state) =>
-      withCommittedProject(state, [...state.bricks.map(cloneBrick), brick], [
+    set((state) => {
+      const placedBrick = findNearestFreeGridPlacement(brick, state.bricks);
+      return withCommittedProject(state, [...state.bricks.map(cloneBrick), placedBrick], [
         ...state.connections.map((connection) => ({ ...connection })),
-      ], { selectedId: id }),
-    );
+      ], { selectedId: id });
+    });
     return id;
   },
 
@@ -225,16 +266,19 @@ export const useEditorStore = create<EditorStore>((set, get) => ({
     if (!selectedId) return;
     const directionMultiplier = direction === 'right' || direction === 1 ? 1 : -1;
     set((state) => {
-      if (!state.bricks.some((brick) => brick.id === selectedId)) return state;
-      const bricks = state.bricks.map((brick): BrickInstance => {
-        if (brick.id !== selectedId) return cloneBrick(brick);
-        const rotation: EulerTuple = [
-          brick.rotation[0],
-          normaliseQuarterTurn(brick.rotation[1] + directionMultiplier * ROTATION_STEP),
-          brick.rotation[2],
-        ];
-        return safeBrick({ ...cloneBrick(brick), rotation });
-      });
+      const selected = state.bricks.find((brick) => brick.id === selectedId);
+      if (!selected) return state;
+      const rotation: EulerTuple = [
+        selected.rotation[0],
+        normaliseQuarterTurn(selected.rotation[1] + directionMultiplier * ROTATION_STEP),
+        selected.rotation[2],
+      ];
+      const rotated = safeBrick({ ...cloneBrick(selected), rotation });
+      if (hasBrickCollision(rotated, state.bricks)) {
+        return { toast: '这里空间不够，积木转不过去' };
+      }
+      const bricks = state.bricks.map((brick): BrickInstance =>
+        brick.id === selectedId ? rotated : cloneBrick(brick));
       return withCommittedProject(
         state,
         bricks,
@@ -271,7 +315,7 @@ export const useEditorStore = create<EditorStore>((set, get) => ({
     if (!source) return null;
 
     const id = makeBrickId();
-    const duplicate = safeBrick({
+    const requestedDuplicate = safeBrick({
       ...cloneBrick(source),
       id,
       position: [
@@ -280,14 +324,15 @@ export const useEditorStore = create<EditorStore>((set, get) => ({
         source.position[2] + BRICK_UNIT,
       ],
     });
-    set((state) =>
-      withCommittedProject(
+    set((state) => {
+      const duplicate = findNearestFreeGridPlacement(requestedDuplicate, state.bricks);
+      return withCommittedProject(
         state,
         [...state.bricks.map(cloneBrick), duplicate],
         state.connections.map((connection) => ({ ...connection })),
         { selectedId: id },
-      ),
-    );
+      );
+    });
     return id;
   },
 
@@ -503,6 +548,26 @@ export const useEditorStore = create<EditorStore>((set, get) => ({
             rotation: [...drag.drop.rotation],
           };
       const finalPreview = safeBrick(rawFinalPreview);
+      const snapContactBrickIds = drag.candidate?.committable
+        ? new Set([
+            { source: drag.candidate.source, target: drag.candidate.target },
+            ...drag.candidate.contacts,
+          ].filter(({ source, target }) => (
+            !isAxisAlignedNormal(source.normal) || !isAxisAlignedNormal(target.normal)
+          )).map(({ target }) => target.brickId))
+        : new Set<string>();
+      const collidingBrickIds = getCollidingBrickIds(
+        finalPreview,
+        state.bricks,
+        snapContactBrickIds,
+      );
+      if (collidingBrickIds.length > 0) {
+        return {
+          drag: null,
+          selectedId: drag.source === 'brick' ? drag.brickId : state.selectedId,
+          toast: '积木不能互相穿过，请换一个位置',
+        };
+      }
 
       if (drag.source === 'palette') {
         if (!drag.overScene) return { drag: null };

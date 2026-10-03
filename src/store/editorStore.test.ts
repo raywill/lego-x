@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import { BRICK_DEFINITIONS } from '../bricks/catalog';
 import { ROTATION_STEP } from '../config/brickConfig';
 import { computeDropPlacement } from '../editor/gravity/dropEngine';
+import { bricksOverlap } from '../editor/collision/collisionEngine';
 import { createConnection, serializeProject } from '../editor/projectModel';
 import { useEditorStore } from './editorStore';
 
@@ -49,6 +50,55 @@ describe('editor store', () => {
 
     useEditorStore.getState().redo();
     expect(useEditorStore.getState().bricks.find((brick) => brick.id === firstId)?.color).toBe('#123abc');
+  });
+
+  it('places a duplicate in the nearest non-overlapping grid space', () => {
+    const sourceId = useEditorStore.getState().addBrick('block-2x4');
+    expect(sourceId).not.toBeNull();
+
+    const copyId = useEditorStore.getState().duplicateSelected();
+    const [source, copy] = useEditorStore.getState().bricks;
+    expect(copyId).not.toBeNull();
+    expect(source.id).toBe(sourceId);
+    expect(copy.id).toBe(copyId);
+    expect(bricksOverlap(source, copy)).toBe(false);
+  });
+
+  it('rejects a dragged brick released inside another brick', () => {
+    const firstId = useEditorStore.getState().addBrick('cube-1', [5, 5, 5]);
+    const secondId = useEditorStore.getState().addBrick('cube-1', [15, 5, 5]);
+    if (!firstId || !secondId) throw new Error('Expected test bricks to be created.');
+
+    useEditorStore.getState().startBrickDrag(secondId);
+    const drag = useEditorStore.getState().drag;
+    if (!drag) throw new Error('Expected an active brick drag.');
+    useEditorStore.getState().updateDragPreview(
+      { ...drag.preview, position: [5, 5, 5] },
+      null,
+      true,
+      true,
+      null,
+    );
+    useEditorStore.getState().commitDrag();
+
+    expect(useEditorStore.getState().bricks.find((brick) => brick.id === secondId)?.position).toEqual([15, 5, 5]);
+    expect(useEditorStore.getState().toast).toContain('不能互相穿过');
+  });
+
+  it('repairs overlapping bodies when opening a legacy project', () => {
+    const serialized = serializeProject({
+      bricks: [
+        { id: 'legacy-a', definitionId: 'cube-1', position: [5, 5, 5], rotation: [0, 0, 0] },
+        { id: 'legacy-b', definitionId: 'cube-1', position: [5, 5, 5], rotation: [0, 0, 0] },
+      ],
+      connections: [],
+    });
+
+    expect(useEditorStore.getState().importProject(serialized)).toBe(true);
+    const [first, second] = useEditorStore.getState().bricks;
+    expect(first.position).toEqual([5, 5, 5]);
+    expect(second.position).toEqual([5, 15, 5]);
+    expect(bricksOverlap(first, second)).toBe(false);
   });
 
   it('adds and removes a connection without deleting neighboring bricks', () => {
