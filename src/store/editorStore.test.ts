@@ -140,4 +140,24 @@ describe('editor store', () => {
     expect(useEditorStore.getState().bricks[0].position).toEqual(drop.position);
     expect(useEditorStore.getState().drag).toBeNull();
   });
+
+  it('never commits a brick below the print bed', () => {
+    const id = useEditorStore.getState().addBrick('cube-1', [0, -40, 0]);
+    expect(id).not.toBeNull();
+    expect(useEditorStore.getState().bricks[0].position[1]).toBeCloseTo(5);
+
+    useEditorStore.getState().startBrickDrag(id!);
+    const drag = useEditorStore.getState().drag;
+    if (!drag) throw new Error('Expected an active brick drag.');
+    useEditorStore.getState().updateDragPreview(
+      { ...drag.preview, position: [12, -25, 4] },
+      null,
+      true,
+      true,
+      null,
+    );
+    useEditorStore.getState().commitDrag();
+
+    expect(useEditorStore.getState().bricks[0].position).toEqual([12, 5, 4]);
+  });
 });

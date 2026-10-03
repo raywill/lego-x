@@ -4,7 +4,12 @@ import { describe, expect, it } from 'vitest';
 import { getBrickDefinition } from '../../bricks/catalog';
 import { createBrickGroup } from '../../bricks/geometry';
 import type { BrickInstance, EulerTuple, Vec3Tuple } from '../../types/model';
-import { computeDropPlacement } from './dropEngine';
+import {
+  computeDropPlacement,
+  isBrickAboveBed,
+  keepAssemblyAboveBed,
+  keepBrickAboveBed,
+} from './dropEngine';
 
 function brick(
   id: string,
@@ -132,5 +137,30 @@ describe('computeDropPlacement', () => {
 
     expect(result.supportBrickId).toBeNull();
     expect(result.position[1]).toBe(5);
+  });
+
+  it('lifts rotated geometry fully above the print bed', () => {
+    const belowBed = brick(
+      'below-bed',
+      'block-1x2',
+      [4, -12, 7],
+      [0, 0, Math.PI / 4],
+    );
+
+    expect(isBrickAboveBed(belowBed)).toBe(false);
+    const safe = keepBrickAboveBed(belowBed);
+    expect(isBrickAboveBed(safe)).toBe(true);
+    expect(bodyBounds(safe).min.y).toBeCloseTo(0);
+    expect(safe.position[0]).toBe(4);
+    expect(safe.position[2]).toBe(7);
+  });
+
+  it('lifts a legacy assembly without changing relative heights', () => {
+    const lower = brick('lower', 'cube-1', [0, -15, 0]);
+    const upper = brick('upper', 'cube-1', [0, 5, 0]);
+    const safe = keepAssemblyAboveBed([lower, upper]);
+
+    expect(bodyBounds(safe[0]).min.y).toBeCloseTo(0);
+    expect(safe[1].position[1] - safe[0].position[1]).toBe(20);
   });
 });

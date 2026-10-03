@@ -3,7 +3,7 @@ import { useEffect } from 'react';
 import { MathUtils, PerspectiveCamera, Plane, Raycaster, Vector2, Vector3 } from 'three';
 import { getBrickDefinition } from '../../bricks/catalog';
 import { BRICK_UNIT, PRINT_BED } from '../../config/brickConfig';
-import { computeDropPlacement } from '../../editor/gravity/dropEngine';
+import { computeDropPlacement, isBrickAboveBed } from '../../editor/gravity/dropEngine';
 import {
   findBestSnap,
   getWorldConnectors,
@@ -178,7 +178,7 @@ export function DragInteraction() {
       if (!definition) return;
       const targets = collectTargetConnectors(activeDrag.brickId);
       const occupied = occupiedConnectorKeys(activeDrag.brickId);
-      const candidate = findBestSnap({
+      const nearestCandidate = findBestSnap({
         dragged: landedPreview,
         draggedDefinition: definition,
         targets,
@@ -196,6 +196,19 @@ export function DragInteraction() {
           return pixels * (visibleHeight / bounds.height);
         },
       });
+      const snappedPreview = nearestCandidate?.committable
+        ? {
+            ...landedPreview,
+            position: nearestCandidate.transform.position,
+            rotation: nearestCandidate.transform.rotation,
+          }
+        : null;
+      // A connector below the print bed is never a valid target. Rejecting the
+      // candidate preserves the connection geometry instead of lifting it and
+      // silently breaking the snap.
+      const candidate = snappedPreview && !isBrickAboveBed(snappedPreview)
+        ? null
+        : nearestCandidate;
       const displayedPreview: BrickInstance = candidate?.committable
         ? { ...landedPreview, position: candidate.transform.position, rotation: candidate.transform.rotation }
         : heldPreview;

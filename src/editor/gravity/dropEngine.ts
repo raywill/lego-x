@@ -40,6 +40,43 @@ interface SupportCandidate {
 const DROP_EPSILON = 1e-7;
 const rotatedBodyBounds = new Map<string, Box3>();
 
+export function isBrickAboveBed(brick: BrickInstance, bedY = 0): boolean {
+  if (!Number.isFinite(bedY)) throw new RangeError('bedY must be a finite number.');
+  return getBodyWorldBounds(brick).min.y >= bedY - DROP_EPSILON;
+}
+
+/**
+ * Returns the same transform unless some body geometry is below the bed. In
+ * that case the complete brick is lifted just enough to make its lowest point
+ * touch the bed. This also handles rotated and compound pieces.
+ */
+export function keepBrickAboveBed(brick: BrickInstance, bedY = 0): BrickInstance {
+  if (!Number.isFinite(bedY)) throw new RangeError('bedY must be a finite number.');
+  const bounds = getBodyWorldBounds(brick);
+  const lift = Math.max(0, bedY - bounds.min.y);
+  return {
+    ...brick,
+    position: [brick.position[0], cleanNearZero(brick.position[1] + lift), brick.position[2]],
+    rotation: [...brick.rotation],
+  };
+}
+
+/** Lift a saved assembly as one unit so existing connections stay aligned. */
+export function keepAssemblyAboveBed(
+  bricks: readonly BrickInstance[],
+  bedY = 0,
+): BrickInstance[] {
+  if (!Number.isFinite(bedY)) throw new RangeError('bedY must be a finite number.');
+  if (bricks.length === 0) return [];
+  const lowestY = Math.min(...bricks.map((brick) => getBodyWorldBounds(brick).min.y));
+  const lift = Math.max(0, bedY - lowestY);
+  return bricks.map((brick) => ({
+    ...brick,
+    position: [brick.position[0], cleanNearZero(brick.position[1] + lift), brick.position[2]],
+    rotation: [...brick.rotation],
+  }));
+}
+
 /**
  * Deterministically lowers a brick onto the highest body below its XZ
  * footprint, or onto the print bed when no brick has a positive-area overlap.

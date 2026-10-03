@@ -4,6 +4,7 @@ import type {
 } from 'manifold-3d';
 import manifoldWasmUrl from 'manifold-3d/manifold.wasm?url';
 import {
+  Box3,
   BufferAttribute,
   BufferGeometry,
   Group,
@@ -59,6 +60,13 @@ export function createPrintableAssembly(bricks: BrickInstance[]): Group {
   }
 
   assembly.updateMatrixWorld(true);
+  const bounds = new Box3().setFromObject(assembly, true);
+  if (!bounds.isEmpty() && bounds.min.y < 0) {
+    // Preserve every relative connection while migrating legacy projects that
+    // contain geometry below the print bed back onto y=0.
+    assembly.position.y -= bounds.min.y;
+    assembly.updateMatrixWorld(true);
+  }
   return assembly;
 }
 
@@ -136,35 +144,89 @@ function manifoldToGeometry(solid: Manifold): BufferGeometry {
   return geometry;
 }
 
+function triangleSoupGeometry(sources: readonly BufferGeometry[]): BufferGeometry {
+  const triangles = sources.map((source) => source.index ? source.toNonIndexed() : source.clone());
+  try {
+    const vertexCount = triangles.reduce((total, geometry) => {
+      const position = geometry.getAttribute('position');
+      return total + (position?.count ?? 0);
+    }, 0);
+    if (vertexCount < 3) throw new Error('积木没有可导出的三角面');
+
+    const positions = new Float32Array(vertexCount * 3);
+    let target = 0;
+    for (const geometry of triangles) {
+      const position = geometry.getAttribute('position');
+      if (!position || position.itemSize !== 3) continue;
+      for (let vertex = 0; vertex < position.count; vertex += 1) {
+        positions[target] = position.getX(vertex);
+        positions[target + 1] = position.getY(vertex);
+        positions[target + 2] = position.getZ(vertex);
+        target += 3;
+      }
+    }
+
+    const geometry = new BufferGeometry();
+    geometry.setAttribute('position', new BufferAttribute(positions.slice(0, target), 3));
+    geometry.computeVertexNormals();
+    return geometry;
+  } finally {
+    triangles.forEach((geometry) => geometry.dispose());
+  }
+}
+
+function hasTriangles(geometry: BufferGeometry): boolean {
+  const position = geometry.getAttribute('position');
+  const triangleEntries = geometry.getIndex()?.count ?? position?.count ?? 0;
+  return Boolean(position && position.count >= 3 && triangleEntries >= 3);
+}
+
 async function buildUnionGeometry(bricks: BrickInstance[]): Promise<BufferGeometry> {
-  const module = await getManifoldModule();
   const assembly = createPrintableAssembly(bricks);
   const solids: Manifold[] = [];
+  const worldGeometries: BufferGeometry[] = [];
 
   try {
     assembly.traverse((child) => {
       if (!(child instanceof Mesh)) return;
       const worldGeometry = child.geometry.clone().applyMatrix4(child.matrixWorld);
+      worldGeometries.push(worldGeometry);
+    });
+    if (worldGeometries.length === 0) throw new Error('场景里还没有可打印的积木');
+
+    const module = await getManifoldModule();
+    for (const worldGeometry of worldGeometries) {
       try {
         solids.push(geometryToManifold(module, worldGeometry));
-      } finally {
-        worldGeometry.dispose();
+      } catch {
+        // Keep collecting source triangles. The fallback below still creates a
+        // valid STL when one procedural solid cannot be processed by Manifold.
       }
-    });
+    }
 
-    if (solids.length === 0) throw new Error('场景里还没有可打印的积木');
+    if (solids.length !== worldGeometries.length) return triangleSoupGeometry(worldGeometries);
 
     const union = module.Manifold.union(solids);
     try {
-      return manifoldToGeometry(union);
+      const geometry = manifoldToGeometry(union);
+      if (hasTriangles(geometry)) return geometry;
+      geometry.dispose();
+      return triangleSoupGeometry(worldGeometries);
     } finally {
       union.delete();
     }
   } catch (error) {
+    try {
+      if (worldGeometries.length) return triangleSoupGeometry(worldGeometries);
+    } catch (fallbackError) {
+      const message = fallbackError instanceof Error ? fallbackError.message : String(fallbackError);
+      throw new Error(`无法生成打印实体：${message}`);
+    }
     const message = error instanceof Error ? error.message : String(error);
-    throw new Error(`无法生成完整的打印实体：${message}`);
+    throw new Error(`无法生成打印实体：${message}`);
   } finally {
     solids.forEach((solid) => solid.delete());
+    worldGeometries.forEach((geometry) => geometry.dispose());
     disposeAssembly(assembly);
   }
 }
@@ -178,16 +240,26 @@ export async function buildBinaryStl(
 
   const geometry = await buildUnionGeometry(bricks);
   geometry.scale(scale, scale, scale);
+  if (!hasTriangles(geometry)) {
+    geometry.dispose();
+    throw new Error('打印文件没有包含任何实体，请检查作品后重试');
+  }
   const material = new MeshStandardMaterial();
   const printableMesh = new Mesh(geometry, material);
   printableMesh.name = 'Digital Bricks unified printable mesh';
 
   try {
     const data = new STLExporter().parse(printableMesh, { binary: true });
-    return data.buffer.slice(
+    const buffer = data.buffer.slice(
       data.byteOffset,
       data.byteOffset + data.byteLength,
     ) as ArrayBuffer;
+    if (buffer.byteLength < 84) throw new Error('生成的 STL 文件不完整');
+    const triangleCount = new DataView(buffer).getUint32(80, true);
+    if (triangleCount === 0 || buffer.byteLength !== 84 + triangleCount * 50) {
+      throw new Error('生成的 STL 文件没有包含可打印实体');
+    }
+    return buffer;
   } finally {
     geometry.dispose();
     material.dispose();

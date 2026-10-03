@@ -15,6 +15,7 @@ import {
   serializeProject,
 } from '../editor/projectModel';
 import type { DropResult } from '../editor/gravity/dropEngine';
+import { keepAssemblyAboveBed, keepBrickAboveBed } from '../editor/gravity/dropEngine';
 import type { SnapCandidate } from '../editor/snapping/snapEngine';
 import type {
   BrickInstance,
@@ -107,6 +108,8 @@ const cloneBrick = (brick: BrickInstance): BrickInstance => ({
   rotation: [...brick.rotation],
 });
 
+const safeBrick = (brick: BrickInstance): BrickInstance => keepBrickAboveBed(cloneBrick(brick));
+
 const snapshotOf = (state: Pick<EditorStore, 'bricks' | 'connections'>): ProjectSnapshot =>
   cloneProjectSnapshot({ bricks: state.bricks, connections: state.connections });
 
@@ -179,13 +182,13 @@ export const useEditorStore = create<EditorStore>((set, get) => ({
     }
 
     const id = makeBrickId();
-    const brick: BrickInstance = {
+    const brick = safeBrick({
       id,
       definitionId,
       position: [...(position ?? [0, getBrickGroundY(definition), 0])],
       rotation: [...rotation],
       ...(color === undefined ? {} : { color }),
-    };
+    });
     set((state) =>
       withCommittedProject(state, [...state.bricks.map(cloneBrick), brick], [
         ...state.connections.map((connection) => ({ ...connection })),
@@ -212,7 +215,7 @@ export const useEditorStore = create<EditorStore>((set, get) => ({
           normaliseQuarterTurn(brick.rotation[1] + directionMultiplier * ROTATION_STEP),
           brick.rotation[2],
         ];
-        return { ...cloneBrick(brick), rotation };
+        return safeBrick({ ...cloneBrick(brick), rotation });
       });
       return withCommittedProject(
         state,
@@ -228,7 +231,7 @@ export const useEditorStore = create<EditorStore>((set, get) => ({
     if (!source) return null;
 
     const id = makeBrickId();
-    const duplicate: BrickInstance = {
+    const duplicate = safeBrick({
       ...cloneBrick(source),
       id,
       position: [
@@ -236,7 +239,7 @@ export const useEditorStore = create<EditorStore>((set, get) => ({
         source.position[1],
         source.position[2] + BRICK_UNIT,
       ],
-    };
+    });
     set((state) =>
       withCommittedProject(
         state,
@@ -277,7 +280,7 @@ export const useEditorStore = create<EditorStore>((set, get) => ({
       if (!previous) return state;
       const restored = cloneProjectSnapshot(previous);
       return {
-        bricks: restored.bricks,
+        bricks: keepAssemblyAboveBed(restored.bricks),
         connections: restored.connections,
         selectedId: null,
         past: state.past.slice(0, -1),
@@ -293,7 +296,7 @@ export const useEditorStore = create<EditorStore>((set, get) => ({
       if (!next) return state;
       const restored = cloneProjectSnapshot(next);
       return {
-        bricks: restored.bricks,
+        bricks: keepAssemblyAboveBed(restored.bricks),
         connections: restored.connections,
         selectedId: null,
         past: appendHistory(state.past, snapshotOf(state)),
@@ -328,7 +331,7 @@ export const useEditorStore = create<EditorStore>((set, get) => ({
       set((state) =>
         withCommittedProject(
           state,
-          project.bricks.map(cloneBrick),
+          keepAssemblyAboveBed(project.bricks),
           project.connections.map((connection) => ({ ...connection })),
           { selectedId: null, toast: '作品已载入' },
         ),
@@ -438,13 +441,14 @@ export const useEditorStore = create<EditorStore>((set, get) => ({
       if (!drag) return state;
       const committedConnection =
         connection ?? (drag.candidate?.committable ? drag.candidate.connection : undefined);
-      const finalPreview: BrickInstance = drag.candidate?.committable || !drag.drop
+      const rawFinalPreview: BrickInstance = drag.candidate?.committable || !drag.drop
         ? cloneBrick(drag.preview)
         : {
             ...cloneBrick(drag.preview),
             position: [...drag.drop.position],
             rotation: [...drag.drop.rotation],
           };
+      const finalPreview = safeBrick(rawFinalPreview);
 
       if (drag.source === 'palette') {
         if (!drag.overScene) return { drag: null };

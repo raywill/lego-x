@@ -110,6 +110,27 @@ describe('STL export', () => {
     expect(Math.max(...xCoordinates)).toBeCloseTo(15, 5);
   });
 
+  it('exports disconnected printable bodies without producing an empty STL', async () => {
+    const triangles = parseBinaryStl(
+      await buildBinaryStl([cube('left', 0), cube('far-right', 40)]),
+    );
+    const xCoordinates = triangles.flatMap(({ a, b, c }) => [a[0], b[0], c[0]]);
+
+    expect(triangles.length).toBeGreaterThan(0);
+    expect(Math.min(...xCoordinates)).toBeCloseTo(-5, 5);
+    expect(Math.max(...xCoordinates)).toBeCloseTo(45, 5);
+  });
+
+  it('lifts a legacy below-bed assembly before export', async () => {
+    const belowBed = cube('below-bed', 0);
+    belowBed.position[1] = -35;
+    const triangles = parseBinaryStl(await buildBinaryStl([belowBed]));
+    const yCoordinates = triangles.flatMap(({ a, b, c }) => [a[1], b[1], c[1]]);
+
+    expect(Math.min(...yCoordinates)).toBeCloseTo(0, 5);
+    expect(Math.max(...yCoordinates)).toBeCloseTo(10, 5);
+  });
+
   it.each([1, 0.75, 0.5, 0.25])('exports the complete model at %sx scale', async (scale) => {
     const triangles = parseBinaryStl(await buildBinaryStl([cube('scaled', 0)], scale));
     const xCoordinates = triangles.flatMap(({ a, b, c }) => [a[0], b[0], c[0]]);
