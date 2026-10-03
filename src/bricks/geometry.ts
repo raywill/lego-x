@@ -1,5 +1,8 @@
 import * as THREE from 'three';
-import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
+import {
+  mergeGeometries,
+  mergeVertices,
+} from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 
 import { BRICK_CONFIG, BRICK_UNIT } from '../config/brickConfig';
 import type {
@@ -166,6 +169,218 @@ function createHalfCylinderGeometry(
   return orientGeometry(geometry, 'z', axis);
 }
 
+function createFrameGeometry(
+  size: [number, number, number],
+  opening: 'square' | 'circle' | 'arch',
+  wallThickness: number,
+): THREE.BufferGeometry {
+  const [width, height, depth] = size;
+  const thickness = THREE.MathUtils.clamp(
+    wallThickness,
+    0.5,
+    Math.min(width, height) / 2 - 0.5,
+  );
+  const shape = polygonShape([
+    [-width / 2, -height / 2],
+    [width / 2, -height / 2],
+    [width / 2, height / 2],
+    [-width / 2, height / 2],
+  ]);
+  const innerWidth = width - thickness * 2;
+  const innerHeight = height - thickness * 2;
+  const hole = new THREE.Path();
+
+  if (opening === 'circle') {
+    hole.absarc(0, 0, Math.min(innerWidth, innerHeight) / 2, 0, Math.PI * 2, true);
+  } else if (opening === 'arch') {
+    const radius = Math.min(innerWidth / 2, innerHeight);
+    const bottom = -height / 2 + thickness;
+    const centerY = height / 2 - thickness - radius;
+    hole.moveTo(-radius, centerY);
+    hole.absarc(0, centerY, radius, Math.PI, 0, true);
+    hole.lineTo(radius, bottom);
+    hole.lineTo(-radius, bottom);
+    hole.closePath();
+  } else {
+    hole.moveTo(-innerWidth / 2, -innerHeight / 2);
+    hole.lineTo(-innerWidth / 2, innerHeight / 2);
+    hole.lineTo(innerWidth / 2, innerHeight / 2);
+    hole.lineTo(innerWidth / 2, -innerHeight / 2);
+    hole.closePath();
+  }
+
+  shape.holes.push(hole);
+  return extrudeCentered(shape, depth);
+}
+
+function createConcaveArcBlockGeometry(
+  size: [number, number, number],
+  radius: number,
+): THREE.BufferGeometry {
+  const [width, height, depth] = size;
+  const safeRadius = THREE.MathUtils.clamp(radius, 0.5, Math.min(width, height));
+  const right = width / 2;
+  const top = height / 2;
+  const shape = new THREE.Shape();
+  shape.moveTo(-width / 2, -height / 2);
+  shape.lineTo(right, -height / 2);
+  shape.lineTo(right, top - safeRadius);
+  shape.absarc(
+    right,
+    top,
+    safeRadius,
+    -Math.PI / 2,
+    -Math.PI,
+    true,
+  );
+  shape.lineTo(-width / 2, top);
+  shape.closePath();
+  return extrudeCentered(shape, depth);
+}
+
+function createQuarterCylinderGeometry(
+  radius: number,
+  length: number,
+  axis: Axis,
+): THREE.BufferGeometry {
+  const shape = new THREE.Shape();
+  shape.moveTo(0, 0);
+  shape.lineTo(radius, 0);
+  shape.absarc(0, 0, radius, 0, Math.PI / 2, false);
+  shape.closePath();
+  const geometry = extrudeCentered(shape, length);
+  geometry.translate(-radius / 2, -radius / 2, 0);
+  return orientGeometry(geometry, 'z', axis);
+}
+
+function createSphereOctantCutoutGeometry(
+  size: [number, number, number],
+  radius: number,
+): THREE.BufferGeometry {
+  const [width, height, depth] = size;
+  const half: [number, number, number] = [width / 2, height / 2, depth / 2];
+  const safeRadius = Math.min(radius, ...half.map((value) => value * 2));
+  const segments = 12;
+  const positions: number[] = [];
+  const indices: number[] = [];
+
+  const appendTriangle = (
+    first: THREE.Vector3,
+    second: THREE.Vector3,
+    third: THREE.Vector3,
+    expectedNormal: THREE.Vector3,
+  ) => {
+    const start = positions.length / 3;
+    const actualNormal = second.clone().sub(first).cross(third.clone().sub(first));
+    const ordered = actualNormal.dot(expectedNormal) >= 0
+      ? [first, second, third]
+      : [first, third, second];
+    ordered.forEach((point) => positions.push(point.x, point.y, point.z));
+    indices.push(start, start + 1, start + 2);
+  };
+
+  const appendPlanarFace = (
+    contour: ReadonlyArray<readonly [number, number]>,
+    pointAt: (u: number, v: number) => THREE.Vector3,
+    expectedNormal: THREE.Vector3,
+  ) => {
+    const points2d = contour.map(([u, v]) => new THREE.Vector2(u, v));
+    const faces = THREE.ShapeUtils.triangulateShape(points2d, []);
+    for (const [a, b, c] of faces) {
+      appendTriangle(
+        pointAt(contour[a][0], contour[a][1]),
+        pointAt(contour[b][0], contour[b][1]),
+        pointAt(contour[c][0], contour[c][1]),
+        expectedNormal,
+      );
+    }
+  };
+
+  const fullContour = (u: number, v: number): Array<[number, number]> => [
+    [-u, -v], [u, -v], [u, v], [-u, v],
+  ];
+  const notchedContour = (u: number, v: number): Array<[number, number]> => {
+    const contour: Array<[number, number]> = [[-u, -v], [u, -v]];
+    for (let step = 0; step <= segments; step += 1) {
+      const first = step;
+      const second = segments - step;
+      const magnitude = Math.hypot(first, second);
+      contour.push([
+        u - safeRadius * (first / magnitude),
+        v - safeRadius * (second / magnitude),
+      ]);
+    }
+    contour.push([-u, v]);
+    return contour;
+  };
+
+  appendPlanarFace(fullContour(half[1], half[2]), (y, z) => (
+    new THREE.Vector3(-half[0], y, z)
+  ), new THREE.Vector3(-1, 0, 0));
+  appendPlanarFace(fullContour(half[0], half[2]), (x, z) => (
+    new THREE.Vector3(x, -half[1], z)
+  ), new THREE.Vector3(0, -1, 0));
+  appendPlanarFace(fullContour(half[0], half[1]), (x, y) => (
+    new THREE.Vector3(x, y, -half[2])
+  ), new THREE.Vector3(0, 0, -1));
+  appendPlanarFace(notchedContour(half[1], half[2]), (y, z) => (
+    new THREE.Vector3(half[0], y, z)
+  ), new THREE.Vector3(1, 0, 0));
+  appendPlanarFace(notchedContour(half[0], half[2]), (x, z) => (
+    new THREE.Vector3(x, half[1], z)
+  ), new THREE.Vector3(0, 1, 0));
+  appendPlanarFace(notchedContour(half[0], half[1]), (x, y) => (
+    new THREE.Vector3(x, y, half[2])
+  ), new THREE.Vector3(0, 0, 1));
+
+  const spherePoints = new Map<string, { point: THREE.Vector3; normal: THREE.Vector3 }>();
+  for (let xStep = 0; xStep <= segments; xStep += 1) {
+    for (let yStep = 0; yStep <= segments - xStep; yStep += 1) {
+      const zStep = segments - xStep - yStep;
+      const normal = new THREE.Vector3(xStep, yStep, zStep).normalize();
+      spherePoints.set(`${xStep}:${yStep}`, {
+        normal,
+        point: new THREE.Vector3(...half).addScaledVector(normal, -safeRadius),
+      });
+    }
+  }
+  const spherePoint = (xStep: number, yStep: number) => {
+    const value = spherePoints.get(`${xStep}:${yStep}`);
+    if (!value) throw new Error('Could not construct sphere cutout surface.');
+    return value;
+  };
+  for (let xStep = 0; xStep < segments; xStep += 1) {
+    for (let yStep = 0; yStep < segments - xStep; yStep += 1) {
+      const a = spherePoint(xStep, yStep);
+      const b = spherePoint(xStep + 1, yStep);
+      const c = spherePoint(xStep, yStep + 1);
+      appendTriangle(
+        a.point,
+        b.point,
+        c.point,
+        a.normal.clone().add(b.normal).add(c.normal).normalize(),
+      );
+      if (yStep < segments - xStep - 1) {
+        const d = spherePoint(xStep + 1, yStep + 1);
+        appendTriangle(
+          b.point,
+          d.point,
+          c.point,
+          b.normal.clone().add(d.normal).add(c.normal).normalize(),
+        );
+      }
+    }
+  }
+
+  const raw = new THREE.BufferGeometry();
+  raw.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+  raw.setIndex(indices);
+  const welded = mergeVertices(raw, 1e-5);
+  raw.dispose();
+  welded.computeVertexNormals();
+  return welded;
+}
+
 function createPrimitiveGeometry(
   definition: PrimitiveGeometryDefinition,
 ): THREE.BufferGeometry {
@@ -238,6 +453,28 @@ function createPrimitiveGeometry(
       );
     case 'halfCylinder':
       return createHalfCylinderGeometry(
+        definition.radius,
+        definition.length,
+        definition.axis,
+      );
+    case 'frame':
+      return createFrameGeometry(
+        definition.size,
+        definition.opening,
+        definition.wallThickness,
+      );
+    case 'concaveArcBlock':
+      return createConcaveArcBlockGeometry(
+        definition.size,
+        definition.radius,
+      );
+    case 'sphereOctantCutout':
+      return createSphereOctantCutoutGeometry(
+        definition.size,
+        definition.radius,
+      );
+    case 'quarterCylinder':
+      return createQuarterCylinderGeometry(
         definition.radius,
         definition.length,
         definition.axis,

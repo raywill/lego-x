@@ -35,6 +35,15 @@ export type GeometryDefinition =
   | { kind: 'doubleWedge'; size: Vec3Tuple }
   | { kind: 'trapezoidPrism'; size: Vec3Tuple; topWidth: number }
   | { kind: 'halfCylinder'; radius: number; length: number; axis: Axis }
+  | {
+      kind: 'frame';
+      size: Vec3Tuple;
+      opening: 'square' | 'circle' | 'arch';
+      wallThickness: number;
+    }
+  | { kind: 'concaveArcBlock'; size: Vec3Tuple; radius: number }
+  | { kind: 'sphereOctantCutout'; size: Vec3Tuple; radius: number }
+  | { kind: 'quarterCylinder'; radius: number; length: number; axis: Axis }
   | { kind: 'compound'; parts: GeometryPartDefinition[] };
 
 export interface GeometryPartDefinition {
@@ -44,7 +53,13 @@ export interface GeometryPartDefinition {
   color?: string;
 }
 
-export type BrickCategory = 'blocks' | 'round' | 'slopes' | 'curves' | 'mechanical';
+export type BrickCategory =
+  | 'blocks'
+  | 'round'
+  | 'slopes'
+  | 'curves'
+  | 'frames'
+  | 'mechanical';
 
 export interface BrickDefinition {
   id: string;

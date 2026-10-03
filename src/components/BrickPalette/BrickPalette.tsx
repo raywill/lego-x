@@ -11,6 +11,7 @@ const categoryNames: Record<BrickCategory, string> = {
   round: '圆形',
   slopes: '斜面与三角',
   curves: '弧形',
+  frames: '框与圆角',
   mechanical: '转动零件',
 };
 

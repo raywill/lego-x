@@ -9,6 +9,7 @@ import type {
   ConnectorDefinition,
 } from '../../types/model';
 import { isConnectionValid } from '../projectModel';
+import { bricksOverlap } from '../collision/collisionEngine';
 import {
   areConnectorsCompatible,
   computeSnapTransform,
@@ -435,6 +436,34 @@ describe('findBestSnap', () => {
         materials.forEach((material) => material.dispose());
       });
     }
+  });
+
+  it('snaps two mirrored concave arc blocks into one larger inner curve', () => {
+    const definition = getBrickDefinition('block-concave-arc');
+    if (!definition) throw new Error('Expected concave arc definition.');
+    const fixed = instance('fixed-arc', definition.id, [0, 10, 0]);
+    const moving = instance('moving-arc', definition.id, [21, 10, 0], [0, Math.PI, 0]);
+    const target = getWorldConnectors(fixed, definition).find(({ connectorId }) => (
+      connectorId === 'right-bottom-magnet'
+    ));
+    if (!target) throw new Error('Expected side connector.');
+
+    const candidate = findBestSnap({
+      dragged: moving,
+      draggedDefinition: definition,
+      targets: [target],
+      distanceResolver: () => 1,
+    });
+    expect(candidate?.committable).toBe(true);
+    const aligned: BrickInstance = {
+      ...moving,
+      position: candidate!.transform.position,
+      rotation: candidate!.transform.rotation,
+    };
+    expect(aligned.position[0]).toBeCloseTo(20, 6);
+    expect(aligned.position[1]).toBeCloseTo(10, 6);
+    expect(bricksOverlap(fixed, aligned)).toBe(false);
+    expect(isConnectionValid(candidate!.connection, [fixed, aligned])).toBe(true);
   });
 
   it.each([

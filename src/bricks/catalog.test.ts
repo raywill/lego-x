@@ -1,14 +1,55 @@
-import { BoxGeometry, Mesh } from 'three';
+import { BoxGeometry, Mesh, Raycaster, Vector3 } from 'three';
 import { describe, expect, it } from 'vitest';
 import { BRICK_DEFINITIONS, getBrickDefinition } from './catalog';
 import { createBrickGroup, getBrickGroundY } from './geometry';
 
 describe('brick catalog', () => {
-  it('contains 27 unique, connector-driven construction pieces', () => {
-    expect(BRICK_DEFINITIONS).toHaveLength(27);
-    expect(new Set(BRICK_DEFINITIONS.map((definition) => definition.id)).size).toBe(27);
+  it('contains 33 unique, connector-driven construction pieces', () => {
+    expect(BRICK_DEFINITIONS).toHaveLength(33);
+    expect(new Set(BRICK_DEFINITIONS.map((definition) => definition.id)).size).toBe(33);
     expect(BRICK_DEFINITIONS.every((definition) => definition.connectors.length > 0)).toBe(true);
   });
+
+  it('provides a compact family of true hollow frames and rounded corners', () => {
+    const requested = [
+      'frame-square',
+      'frame-circle',
+      'frame-arch',
+      'block-concave-arc',
+      'block-sphere-octant-cutout',
+      'quarter-cylinder',
+    ];
+    const definitions = requested.map((id) => getBrickDefinition(id));
+
+    expect(definitions.every(Boolean)).toBe(true);
+    expect(definitions.every((definition) => definition?.category === 'frames')).toBe(true);
+    expect(definitions.every((definition) => (definition?.connectors.length ?? 0) > 0)).toBe(true);
+    expect(definitions.slice(0, 3).map((definition) => definition?.geometry.kind))
+      .toEqual(['frame', 'frame', 'frame']);
+  });
+
+  it.each(['frame-square', 'frame-circle', 'frame-arch'])(
+    'renders a traversable opening instead of a painted recess for %s',
+    (definitionId) => {
+      const definition = getBrickDefinition(definitionId);
+      if (!definition) throw new Error(`Expected ${definitionId}.`);
+      const group = createBrickGroup(definition, { includeConnectorGeometry: false });
+      group.updateMatrixWorld(true);
+      const raycaster = new Raycaster();
+
+      raycaster.set(new Vector3(0, 0, 50), new Vector3(0, 0, -1));
+      expect(raycaster.intersectObject(group, true)).toHaveLength(0);
+      raycaster.set(new Vector3(12, 0, 50), new Vector3(0, 0, -1));
+      expect(raycaster.intersectObject(group, true).length).toBeGreaterThan(0);
+
+      group.traverse((child) => {
+        if (!(child instanceof Mesh)) return;
+        child.geometry.dispose();
+        const materials = Array.isArray(child.material) ? child.material : [child.material];
+        materials.forEach((material) => material.dispose());
+      });
+    },
+  );
 
   it('provides one-unit and two-unit printable cones', () => {
     const small = getBrickDefinition('cone-1');

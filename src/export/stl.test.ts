@@ -52,6 +52,23 @@ function edgeUseCounts(triangles: Triangle[]): Map<string, number> {
   return counts;
 }
 
+function projectedRayHitCount(
+  triangles: readonly Triangle[],
+  x: number,
+  y: number,
+): number {
+  const epsilon = 1e-7;
+  return triangles.filter(({ a, b, c }) => {
+    const denominator = (b[1] - c[1]) * (a[0] - c[0])
+      + (c[0] - b[0]) * (a[1] - c[1]);
+    if (Math.abs(denominator) <= epsilon) return false;
+    const first = ((b[1] - c[1]) * (x - c[0]) + (c[0] - b[0]) * (y - c[1])) / denominator;
+    const second = ((c[1] - a[1]) * (x - c[0]) + (a[0] - c[0]) * (y - c[1])) / denominator;
+    const third = 1 - first - second;
+    return first >= -epsilon && second >= -epsilon && third >= -epsilon;
+  }).length;
+}
+
 function cube(id: string, x: number): BrickInstance {
   const definition = getBrickDefinition('cube-1');
   if (!definition) throw new Error('Expected cube-1 in the catalog.');
@@ -119,6 +136,38 @@ describe('STL export', () => {
     expect(triangles.length).toBeGreaterThan(0);
     expect(Math.min(...xCoordinates)).toBeCloseTo(0, 5);
     expect(Math.max(...xCoordinates)).toBeCloseTo(50, 5);
+  });
+
+  it.each(['frame-square', 'frame-circle', 'frame-arch'])(
+    'preserves the through-opening of %s in the STL',
+    async (definitionId) => {
+      const definition = getBrickDefinition(definitionId);
+      if (!definition) throw new Error(`Expected ${definitionId}.`);
+      const triangles = parseBinaryStl(await buildBinaryStl([{
+        id: `test-${definitionId}`,
+        definitionId,
+        position: [5, definition.size[1] / 2, 5],
+        rotation: [0, 0, 0],
+      }]));
+
+      expect(projectedRayHitCount(triangles, 5, definition.size[1] / 2)).toBe(0);
+      expect(projectedRayHitCount(triangles, 17, definition.size[1] / 2)).toBeGreaterThan(0);
+    },
+  );
+
+  it('exports the sphere-octant cutout as a closed printable shell', async () => {
+    const definition = getBrickDefinition('block-sphere-octant-cutout');
+    if (!definition) throw new Error('Expected sphere-octant cutout.');
+    const triangles = parseBinaryStl(await buildBinaryStl([{
+      id: 'sphere-cutout',
+      definitionId: definition.id,
+      position: [0, definition.size[1] / 2, 0],
+      rotation: [0, 0, 0],
+    }]));
+
+    const edgeCounts = [...edgeUseCounts(triangles).values()];
+    expect(edgeCounts.length).toBeGreaterThan(0);
+    expect(edgeCounts.every((count) => count === 2)).toBe(true);
   });
 
   it('lifts a legacy below-bed assembly before export', async () => {

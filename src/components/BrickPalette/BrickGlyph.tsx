@@ -125,6 +125,51 @@ export function BrickGlyph({ definition }: { definition: BrickDefinition }) {
     );
   }
 
+  if (definition.geometry.kind === 'frame') {
+    const opening = definition.geometry.opening;
+    const openingShape = opening === 'circle'
+      ? <circle cx="42" cy="31" r="14" fill="#f8f9ff" stroke={dark} strokeWidth="2.2" />
+      : opening === 'arch'
+        ? <path d="M29 47V31a13 13 0 0 1 26 0v16Z" fill="#f8f9ff" stroke={dark} strokeWidth="2.2" />
+        : <rect x="27" y="18" width="30" height="27" fill="#f8f9ff" stroke={dark} strokeWidth="2.2" />;
+    return (
+      <svg viewBox="0 0 84 62" aria-hidden="true">
+        <path d="M15 8h54v46H15Z" fill={color} stroke={dark} strokeWidth="2.5" strokeLinejoin="round" />
+        {openingShape}
+        <path d="M20 13h44" fill="none" stroke="#fff" strokeOpacity=".58" strokeWidth="2.4" strokeLinecap="round" />
+      </svg>
+    );
+  }
+
+  if (kind === 'concaveArcBlock') {
+    return (
+      <svg viewBox="0 0 84 62" aria-hidden="true">
+        <path d="M13 11h58v39H45a26 26 0 0 0-26-26h-6Z" fill={color} stroke={dark} strokeWidth="2.4" strokeLinejoin="round" />
+        <path d="M19 24a26 26 0 0 1 26 26" fill="none" stroke="#f8f9ff" strokeWidth="3" />
+        <path d="M19 16h43" fill="none" stroke="#fff" strokeOpacity=".58" strokeWidth="2.4" strokeLinecap="round" />
+      </svg>
+    );
+  }
+
+  if (kind === 'sphereOctantCutout') {
+    return (
+      <svg viewBox="0 0 84 62" aria-hidden="true">
+        <path d="M13 13h58v38H13Z" fill={color} stroke={dark} strokeWidth="2.4" strokeLinejoin="round" />
+        <path d="M71 13v25A25 25 0 0 1 46 13Z" fill="#f8f9ff" stroke={dark} strokeWidth="2.2" />
+        <path d="M48 14c11 2 18 9 22 20" fill="none" stroke="#d8dcef" strokeWidth="2.4" strokeLinecap="round" />
+      </svg>
+    );
+  }
+
+  if (kind === 'quarterCylinder') {
+    return (
+      <svg viewBox="0 0 84 62" aria-hidden="true">
+        <path d="M13 48h55V16a32 32 0 0 0-32 32Z" fill={color} stroke={dark} strokeWidth="2.4" strokeLinejoin="round" />
+        <path d="M37 43a27 27 0 0 1 26-26" fill="none" stroke="#fff" strokeOpacity=".58" strokeWidth="2.8" strokeLinecap="round" />
+      </svg>
+    );
+  }
+
   if (kind === 'sphere' || kind === 'hemisphere') {
     return (
       <svg viewBox="0 0 84 62" aria-hidden="true">

@@ -338,6 +338,134 @@ function annulusSurfaceConnectors(size: Vec3Tuple): ConnectorDefinition[] {
   ]);
 }
 
+function frameSurfaceConnectors(size: Vec3Tuple): ConnectorDefinition[] {
+  const [width, height] = size;
+  const horizontalColumns = Math.max(1, Math.round(width / BRICK_UNIT));
+  const verticalRows = Math.max(1, Math.round(height / BRICK_UNIT));
+  const connectors: ConnectorDefinition[] = [
+    ...createConnectorGrid({
+      face: 'top',
+      type: 'stud',
+      size,
+      columns: horizontalColumns,
+      rows: 1,
+      idPrefix: 'frame-top-stud',
+    }),
+    ...createConnectorGrid({
+      face: 'bottom',
+      type: 'socket',
+      size,
+      columns: horizontalColumns,
+      rows: 1,
+      idPrefix: 'frame-bottom-socket',
+    }),
+    ...createConnectorGrid({
+      face: 'left',
+      type: 'magnet',
+      size,
+      columns: 1,
+      rows: verticalRows,
+      pitchV: BRICK_UNIT,
+      idPrefix: 'frame-left-magnet',
+    }),
+    ...createConnectorGrid({
+      face: 'right',
+      type: 'magnet',
+      size,
+      columns: 1,
+      rows: verticalRows,
+      pitchV: BRICK_UNIT,
+      idPrefix: 'frame-right-magnet',
+    }),
+  ];
+  for (const face of ['front', 'back'] as const) {
+    for (const y of [-height / 2 + BRICK_LAYER, height / 2 - BRICK_LAYER]) {
+      for (let column = 0; column < horizontalColumns; column += 1) {
+        const x = (column - (horizontalColumns - 1) / 2) * BRICK_UNIT;
+        connectors.push(createFaceConnector(
+          `frame-${face}-magnet-${column}-${y < 0 ? 'bottom' : 'top'}`,
+          'magnet',
+          face,
+          size,
+          x,
+          y,
+        ));
+      }
+    }
+  }
+  return connectors;
+}
+
+function concaveArcConnectors(size: Vec3Tuple): ConnectorDefinition[] {
+  const connectors = [
+    ...bottomGrid(size, 2, 1),
+    createFaceConnector('top-left-stud', 'stud', 'top', size, -BRICK_UNIT / 2),
+  ];
+  for (const y of [-BRICK_UNIT / 2, BRICK_UNIT / 2]) {
+    connectors.push(createFaceConnector(
+      `left-magnet-${y < 0 ? 'bottom' : 'top'}`,
+      'magnet',
+      'left',
+      size,
+      0,
+      y,
+    ));
+  }
+  // Keep the connector's twist reference vertical. Two copies can then use
+  // the same right-face connector after one is yawed 180°, forming a larger
+  // mirrored inner arc without rolling either brick upside down.
+  connectors.push(createConnector(
+    'right-bottom-magnet',
+    'magnet',
+    [size[0] / 2, -BRICK_UNIT / 2, 0],
+    [-QUARTER_TURN, 0, -QUARTER_TURN],
+  ));
+  for (const face of ['front', 'back'] as const) {
+    for (const [x, y] of [
+      [-BRICK_UNIT / 2, -BRICK_UNIT / 2],
+      [-BRICK_UNIT / 2, BRICK_UNIT / 2],
+      [BRICK_UNIT / 2, -BRICK_UNIT / 2],
+    ] as const) {
+      connectors.push(createFaceConnector(
+        `${face}-magnet-${x}-${y}`,
+        'magnet',
+        face,
+        size,
+        x,
+        y,
+      ));
+    }
+  }
+  return connectors;
+}
+
+function sphereCutoutConnectors(size: Vec3Tuple): ConnectorDefinition[] {
+  const connectors: ConnectorDefinition[] = [...bottomGrid(size, 2, 2)];
+  for (const x of [-BRICK_UNIT / 2, BRICK_UNIT / 2]) {
+    for (const z of [-BRICK_UNIT / 2, BRICK_UNIT / 2]) {
+      if (x > 0 && z > 0) continue;
+      connectors.push(createFaceConnector(`top-stud-${x}-${z}`, 'stud', 'top', size, x, z));
+    }
+  }
+  for (const face of ['left', 'right'] as const) {
+    for (const y of [-BRICK_UNIT / 2, BRICK_UNIT / 2]) {
+      for (const z of [-BRICK_UNIT / 2, BRICK_UNIT / 2]) {
+        if (face === 'right' && y > 0 && z > 0) continue;
+        connectors.push(createFaceConnector(`${face}-magnet-${y}-${z}`, 'magnet', face, size, z, y));
+      }
+    }
+  }
+  for (const face of ['front', 'back'] as const) {
+    for (const x of [-BRICK_UNIT / 2, BRICK_UNIT / 2]) {
+      for (const y of [-BRICK_UNIT / 2, BRICK_UNIT / 2]) {
+        if (face === 'front' && x > 0 && y > 0) continue;
+        connectors.push(createFaceConnector(`${face}-magnet-${x}-${y}`, 'magnet', face, size, x, y));
+      }
+    }
+  }
+  return connectors;
+}
+
 const U = BRICK_UNIT;
 const PLATE = BRICK_CONFIG.plateHeight;
 const DISC = BRICK_CONFIG.discHeight;
@@ -364,6 +492,10 @@ const trapezoidSize: Vec3Tuple = [3 * U, U, 2 * U];
 const halfCylinderSize: Vec3Tuple = [3 * U, U, 2 * U];
 const hemisphereSize: Vec3Tuple = [2 * U, U, 2 * U];
 const sphereSize: Vec3Tuple = [2 * U, 2 * U, 2 * U];
+const frameSize: Vec3Tuple = [3 * U, 3 * U, U];
+const concaveArcSize: Vec3Tuple = [2 * U, 2 * U, U];
+const sphereCutoutSize: Vec3Tuple = [2 * U, 2 * U, 2 * U];
+const quarterCylinderSize: Vec3Tuple = [3 * U, U, U];
 const wheelSize: Vec3Tuple = [U, 3 * U, 3 * U];
 const axleSize: Vec3Tuple = [5 * U, ROD_DIAMETER, ROD_DIAMETER];
 const hingeSize: Vec3Tuple = [2 * U, U, 2 * U];
@@ -752,6 +884,70 @@ export const BRICK_DEFINITIONS: BrickDefinition[] = [
       createFaceConnector('left-socket', 'socket', 'left', sphereSize),
       createFaceConnector('front-stud', 'stud', 'front', sphereSize),
       createFaceConnector('back-socket', 'socket', 'back', sphereSize),
+    ],
+  },
+  {
+    id: 'frame-square',
+    name: '方形中空框',
+    shortName: '方孔框',
+    category: 'frames',
+    size: frameSize,
+    color: '#55b8d6',
+    geometry: { kind: 'frame', size: frameSize, opening: 'square', wallThickness: BRICK_LAYER },
+    connectors: frameSurfaceConnectors(frameSize),
+  },
+  {
+    id: 'frame-circle',
+    name: '圆形中空框',
+    shortName: '圆孔框',
+    category: 'frames',
+    size: frameSize,
+    color: '#5c9fe4',
+    geometry: { kind: 'frame', size: frameSize, opening: 'circle', wallThickness: BRICK_LAYER },
+    connectors: frameSurfaceConnectors(frameSize),
+  },
+  {
+    id: 'frame-arch',
+    name: '拱形中空框',
+    shortName: '拱孔框',
+    category: 'frames',
+    size: frameSize,
+    color: '#7d87e8',
+    geometry: { kind: 'frame', size: frameSize, opening: 'arch', wallThickness: BRICK_LAYER },
+    connectors: frameSurfaceConnectors(frameSize),
+  },
+  {
+    id: 'block-concave-arc',
+    name: '弧形镂空块',
+    shortName: '内弧块',
+    category: 'frames',
+    size: concaveArcSize,
+    color: '#9b78df',
+    geometry: { kind: 'concaveArcBlock', size: concaveArcSize, radius: U },
+    connectors: concaveArcConnectors(concaveArcSize),
+  },
+  {
+    id: 'block-sphere-octant-cutout',
+    name: '八分之一球形镂空块',
+    shortName: '内球角',
+    category: 'frames',
+    size: sphereCutoutSize,
+    color: '#cf70c5',
+    geometry: { kind: 'sphereOctantCutout', size: sphereCutoutSize, radius: U },
+    connectors: sphereCutoutConnectors(sphereCutoutSize),
+  },
+  {
+    id: 'quarter-cylinder',
+    name: '四分之一圆柱',
+    shortName: '四分圆',
+    category: 'frames',
+    size: quarterCylinderSize,
+    color: '#eb7798',
+    geometry: { kind: 'quarterCylinder', radius: U, length: 3 * U, axis: 'x' },
+    connectors: [
+      ...bottomGrid(quarterCylinderSize, 3, 1),
+      createFaceConnector('left-magnet', 'magnet', 'left', quarterCylinderSize),
+      createFaceConnector('right-magnet', 'magnet', 'right', quarterCylinderSize),
     ],
   },
   {
