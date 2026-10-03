@@ -1,4 +1,3 @@
-import { ContactShadows } from '@react-three/drei';
 import { Canvas } from '@react-three/fiber';
 import { useCallback } from 'react';
 import type { ThreeEvent } from '@react-three/fiber';
@@ -9,7 +8,6 @@ import { CameraRig, type CameraView } from './CameraRig';
 import { DragInteraction } from './DragInteraction';
 import { GravityDropPreview } from './GravityDropPreview';
 import { PrintBed } from './PrintBed';
-import { SmartDropCamera } from './SmartDropCamera';
 
 function SceneContents({ view, resetKey }: { view: CameraView; resetKey: number }) {
   const bricks = useEditorStore((state) => state.bricks);
@@ -83,16 +81,7 @@ function SceneContents({ view, resetKey }: { view: CameraView; resetKey: number 
         <BrickObject brick={drag.preview} opacity={0.68} selected ghost />
       ) : null}
       <DragInteraction />
-      <ContactShadows position={[0, 0.08, 0]} opacity={0.2} scale={235} blur={2.3} far={130} />
       <CameraRig view={view} resetKey={resetKey} dragging={Boolean(drag)} />
-      <SmartDropCamera
-        active={Boolean(drag?.overScene && drag.drop)}
-        heldPosition={drag?.overScene ? drag.preview.position : null}
-        landedPosition={drag?.drop?.position ?? null}
-        contactNormal={[0, 1, 0]}
-        interactionSignal={drag?.brickId}
-        resetSignal={resetKey}
-      />
     </>
   );
 }

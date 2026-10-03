@@ -1,38 +1,72 @@
-import { Grid, Line, RoundedBox } from '@react-three/drei';
-import { PRINT_BED } from '../../config/brickConfig';
+import { useEffect, useMemo } from 'react';
+import { CanvasTexture, DoubleSide, LinearFilter, SRGBColorSpace } from 'three';
+import { BRICK_UNIT, PRINT_BED } from '../../config/brickConfig';
+
+function createBedTexture(): CanvasTexture {
+  const pixelsPerMillimeter = 2;
+  const canvas = document.createElement('canvas');
+  canvas.width = PRINT_BED.width * pixelsPerMillimeter;
+  canvas.height = PRINT_BED.depth * pixelsPerMillimeter;
+  const context = canvas.getContext('2d');
+  if (!context) throw new Error('Unable to draw print bed guides.');
+
+  context.fillStyle = '#eef2f8';
+  context.fillRect(0, 0, canvas.width, canvas.height);
+  const step = BRICK_UNIT * pixelsPerMillimeter;
+  const line = (x1: number, y1: number, x2: number, y2: number, color: string, width: number) => {
+    context.beginPath();
+    context.moveTo(x1, y1);
+    context.lineTo(x2, y2);
+    context.strokeStyle = color;
+    context.lineWidth = width;
+    context.stroke();
+  };
+
+  for (let x = 0, index = 0; x <= canvas.width; x += step, index += 1) {
+    const major = index % 5 === 0;
+    line(x, 0, x, canvas.height, major ? '#8b98ad' : '#c1c9d5', major ? 3 : 1.5);
+  }
+  for (let y = 0, index = 0; y <= canvas.height; y += step, index += 1) {
+    const major = index % 5 === 0;
+    line(0, y, canvas.width, y, major ? '#8b98ad' : '#c1c9d5', major ? 3 : 1.5);
+  }
+
+  line(0, canvas.height / 2, canvas.width, canvas.height / 2, '#6859d2', 6);
+  line(canvas.width / 2, 0, canvas.width / 2, canvas.height, '#e0a13e', 6);
+  context.beginPath();
+  context.arc(canvas.width / 2, canvas.height / 2, 8, 0, Math.PI * 2);
+  context.strokeStyle = '#4c426f';
+  context.lineWidth = 3;
+  context.stroke();
+  context.strokeStyle = '#6757e8';
+  context.lineWidth = 5;
+  context.strokeRect(2.5, 2.5, canvas.width - 5, canvas.height - 5);
+
+  const texture = new CanvasTexture(canvas);
+  texture.colorSpace = SRGBColorSpace;
+  texture.minFilter = LinearFilter;
+  texture.magFilter = LinearFilter;
+  texture.generateMipmaps = false;
+  texture.needsUpdate = true;
+  return texture;
+}
 
 export function PrintBed() {
   const halfWidth = PRINT_BED.width / 2;
   const halfDepth = PRINT_BED.depth / 2;
-  const border: [number, number, number][] = [
-    [-halfWidth, 0.16, -halfDepth],
-    [halfWidth, 0.16, -halfDepth],
-    [halfWidth, 0.16, halfDepth],
-    [-halfWidth, 0.16, halfDepth],
-    [-halfWidth, 0.16, -halfDepth],
-  ];
+  const bedTexture = useMemo(createBedTexture, []);
+  useEffect(() => () => bedTexture.dispose(), [bedTexture]);
 
   return (
     <group>
-      <RoundedBox args={[PRINT_BED.width + 6, 2.6, PRINT_BED.depth + 6]} radius={3} smoothness={3} position={[0, -1.45, 0]} receiveShadow>
+      <mesh position={[0, -1.45, 0]} receiveShadow>
+        <boxGeometry args={[PRINT_BED.width + 6, 2.6, PRINT_BED.depth + 6]} />
         <meshStandardMaterial color="#cfd7e6" roughness={0.92} />
-      </RoundedBox>
-      <mesh receiveShadow rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.04, 0]}>
-        <planeGeometry args={[PRINT_BED.width, PRINT_BED.depth]} />
-        <meshStandardMaterial color="#eef2f8" roughness={0.95} />
       </mesh>
-      <Grid
-        args={[PRINT_BED.width, PRINT_BED.depth]}
-        position={[0, 0.035, 0]}
-        cellColor="#c4ccda"
-        sectionColor="#98a5ba"
-        cellSize={10}
-        sectionSize={50}
-        fadeDistance={360}
-        fadeStrength={0}
-        infiniteGrid={false}
-      />
-      <Line points={border} color="#6757e8" lineWidth={2.1} />
+      <mesh receiveShadow rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.02, 0]}>
+        <planeGeometry args={[PRINT_BED.width, PRINT_BED.depth]} />
+        <meshStandardMaterial map={bedTexture} roughness={0.95} side={DoubleSide} />
+      </mesh>
       <mesh position={[-halfWidth - 3, 0, -halfDepth - 3]}>
         <sphereGeometry args={[2.1, 14, 14]} />
         <meshStandardMaterial color="#ffcd3c" />
