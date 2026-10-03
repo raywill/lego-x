@@ -34,6 +34,23 @@ describe('editor store', () => {
     expect(useEditorStore.getState().bricks[0].rotation[1]).toBe(0);
   });
 
+  it('changes only the selected brick color and supports undo and redo', () => {
+    const firstId = useEditorStore.getState().addBrick('cube-1');
+    const secondId = useEditorStore.getState().addBrick('block-1x2');
+    if (!firstId || !secondId) throw new Error('Expected test bricks to be created.');
+
+    useEditorStore.getState().selectBrick(firstId);
+    useEditorStore.getState().setSelectedColor('#43a7df');
+    expect(useEditorStore.getState().bricks.find((brick) => brick.id === firstId)?.color).toBe('#43a7df');
+    expect(useEditorStore.getState().bricks.find((brick) => brick.id === secondId)?.color).toBeUndefined();
+
+    useEditorStore.getState().undo();
+    expect(useEditorStore.getState().bricks.find((brick) => brick.id === firstId)?.color).toBeUndefined();
+
+    useEditorStore.getState().redo();
+    expect(useEditorStore.getState().bricks.find((brick) => brick.id === firstId)?.color).toBe('#43a7df');
+  });
+
   it('adds and removes a connection without deleting neighboring bricks', () => {
     const firstId = useEditorStore.getState().addBrick(definition.id, [0, definition.size[1] / 2, 0]);
     const secondId = useEditorStore.getState().addBrick(definition.id, [0, definition.size[1] * 1.5, 0]);

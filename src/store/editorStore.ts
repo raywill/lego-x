@@ -64,6 +64,7 @@ export interface EditorStore {
   ) => string | null;
   selectBrick: (id: string | null) => void;
   rotateSelected: (direction: RotationDirection) => void;
+  setSelectedColor: (color?: string) => void;
   duplicateSelected: () => string | null;
   deleteSelected: () => void;
   clearProject: () => void;
@@ -238,6 +239,28 @@ export const useEditorStore = create<EditorStore>((set, get) => ({
         state,
         bricks,
         removeConnectionsForBrick(state.connections, selectedId),
+      );
+    });
+  },
+
+  setSelectedColor: (color) => {
+    const { selectedId } = get();
+    if (!selectedId) return;
+    set((state) => {
+      const selected = state.bricks.find((brick) => brick.id === selectedId);
+      if (!selected || selected.color === color) return state;
+      const bricks = state.bricks.map((brick) => {
+        const next = cloneBrick(brick);
+        if (brick.id !== selectedId) return next;
+        if (color === undefined) delete next.color;
+        else next.color = color;
+        return next;
+      });
+      return withCommittedProject(
+        state,
+        bricks,
+        state.connections.map((connection) => ({ ...connection })),
+        { selectedId },
       );
     });
   },
