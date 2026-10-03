@@ -1,4 +1,14 @@
-import { Check, ChevronDown, Copy, Palette, RotateCcw, RotateCw, Trash2 } from 'lucide-react';
+import {
+  ArrowDown,
+  ArrowUp,
+  Check,
+  ChevronDown,
+  Copy,
+  Palette,
+  RotateCcw,
+  RotateCw,
+  Trash2,
+} from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { getBrickDefinition } from '../../bricks/catalog';
 import { useEditorStore } from '../../store/editorStore';
@@ -22,6 +32,7 @@ export function SelectionToolbar() {
   const selectedId = useEditorStore((state) => state.selectedId);
   const brick = useEditorStore((state) => state.bricks.find((item) => item.id === selectedId));
   const rotateSelected = useEditorStore((state) => state.rotateSelected);
+  const flipSelected = useEditorStore((state) => state.flipSelected);
   const setSelectedColor = useEditorStore((state) => state.setSelectedColor);
   const duplicateSelected = useEditorStore((state) => state.duplicateSelected);
   const deleteSelected = useEditorStore((state) => state.deleteSelected);
@@ -125,6 +136,8 @@ export function SelectionToolbar() {
       </div>
       <button type="button" onClick={() => rotateSelected(-1)} aria-label="向左转 90°" title="向左转 90°"><RotateCcw size={19} /><span>左转</span></button>
       <button type="button" onClick={() => rotateSelected(1)} aria-label="向右转 90°" title="向右转 90°"><RotateCw size={19} /><span>右转</span></button>
+      <button type="button" onClick={() => flipSelected('up')} aria-label="朝视图上方翻转 90°" title="朝当前视图上方翻转 90°"><ArrowUp size={19} /><span>上翻</span></button>
+      <button type="button" onClick={() => flipSelected('down')} aria-label="朝视图下方翻转 90°" title="朝当前视图下方翻转 90°"><ArrowDown size={19} /><span>下翻</span></button>
       <button type="button" onClick={duplicateSelected} aria-label="复制积木"><Copy size={19} /><span>复制</span></button>
       <button type="button" className="delete-action" onClick={deleteSelected} aria-label="删除积木"><Trash2 size={19} /><span>删除</span></button>
     </div>

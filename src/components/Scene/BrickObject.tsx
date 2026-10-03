@@ -1,8 +1,9 @@
 import type { ThreeEvent } from '@react-three/fiber';
 import { useEffect, useMemo } from 'react';
-import { Mesh, MeshStandardMaterial } from 'three';
+import { Mesh, MeshStandardMaterial, Vector3 } from 'three';
 import { getBrickDefinition } from '../../bricks/catalog';
 import { createBrickGroup } from '../../bricks/geometry';
+import { getBrickBodyBounds } from '../../editor/grid/gridEngine';
 import type { BrickInstance } from '../../types/model';
 
 interface BrickObjectProps {
@@ -43,6 +44,15 @@ export function BrickObject({
     });
     return group;
   }, [brick.color, definition, opacity, selected]);
+  const selectionMarker = useMemo(() => {
+    if (!definition || !selected || ghost) return null;
+    const bounds = getBrickBodyBounds(brick, definition);
+    const size = bounds.getSize(new Vector3());
+    return {
+      position: [brick.position[0], bounds.min.y + 0.08, brick.position[2]] as const,
+      radius: Math.max(size.x, size.z),
+    };
+  }, [brick, definition, ghost, selected]);
 
   useEffect(() => () => {
     object?.traverse((child) => {
@@ -56,22 +66,24 @@ export function BrickObject({
   if (!definition || !object) return null;
 
   return (
-    <group
-      position={brick.position}
-      rotation={brick.rotation}
-      onPointerDown={ghost || !onPointerDown ? undefined : (event) => onPointerDown(event, brick)}
-    >
-      <primitive object={object} />
-      {selected && !ghost && (
-        <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -definition.size[1] / 2 - 0.26, 0]}>
+    <>
+      <group
+        position={brick.position}
+        rotation={brick.rotation}
+        onPointerDown={ghost || !onPointerDown ? undefined : (event) => onPointerDown(event, brick)}
+      >
+        <primitive object={object} />
+      </group>
+      {selectionMarker && (
+        <mesh rotation={[-Math.PI / 2, 0, 0]} position={selectionMarker.position}>
           <ringGeometry args={[
-            Math.max(definition.size[0], definition.size[2]) * 0.62,
-            Math.max(definition.size[0], definition.size[2]) * 0.78,
+            selectionMarker.radius * 0.62,
+            selectionMarker.radius * 0.78,
             40,
           ]} />
           <meshBasicMaterial color="#6656e4" transparent opacity={0.72} depthWrite={false} />
         </mesh>
       )}
-    </group>
+    </>
   );
 }

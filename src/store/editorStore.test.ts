@@ -3,6 +3,7 @@ import { BRICK_DEFINITIONS } from '../bricks/catalog';
 import { ROTATION_STEP } from '../config/brickConfig';
 import { computeDropPlacement } from '../editor/gravity/dropEngine';
 import { bricksOverlap } from '../editor/collision/collisionEngine';
+import { getBrickBodyBounds, isBrickOnGrid } from '../editor/grid/gridEngine';
 import { createConnection, serializeProject } from '../editor/projectModel';
 import { useEditorStore } from './editorStore';
 
@@ -18,6 +19,7 @@ const resetStore = () => {
     future: [],
     drag: null,
     toast: null,
+    viewRightAxis: [1, 0],
   });
 };
 
@@ -33,6 +35,57 @@ describe('editor store', () => {
 
     useEditorStore.getState().rotateSelected('left');
     expect(useEditorStore.getState().bricks[0].rotation[1]).toBe(0);
+  });
+
+  it('flips relative to the current view, lands on the grid, and stays undoable', () => {
+    const id = useEditorStore.getState().addBrick('block-1x2', [0, 5, 5]);
+    expect(id).not.toBeNull();
+    const before = useEditorStore.getState().bricks[0];
+
+    useEditorStore.getState().setViewRightAxis([0, 1]);
+    useEditorStore.getState().flipSelected('up');
+    const flipped = useEditorStore.getState().bricks[0];
+    expect(flipped.rotation).not.toEqual(before.rotation);
+    expect(flipped.position[1]).toBeCloseTo(10);
+    expect(getBrickBodyBounds(flipped).min.y).toBeCloseTo(0);
+    expect(isBrickOnGrid(flipped)).toBe(true);
+
+    useEditorStore.getState().undo();
+    expect(useEditorStore.getState().bricks[0]).toEqual(before);
+  });
+
+  it('refuses a flip whose final occupied space is blocked', () => {
+    useEditorStore.setState({
+      bricks: [
+        { id: 'moving', definitionId: 'block-1x2', position: [0, 5, 5], rotation: [0, 0, 0] },
+        { id: 'blocker', definitionId: 'cube-1', position: [-5, 15, 5], rotation: [0, 0, 0] },
+      ],
+      selectedId: 'moving',
+      viewRightAxis: [0, 1],
+    });
+    const before = useEditorStore.getState().bricks[0];
+
+    useEditorStore.getState().flipSelected('up');
+
+    expect(useEditorStore.getState().bricks[0]).toEqual(before);
+    expect(useEditorStore.getState().toast).toContain('翻不过去');
+  });
+
+  it('removes only the flipped brick connections and restores them on undo', () => {
+    const lowerId = useEditorStore.getState().addBrick(definition.id, [5, 5, 5]);
+    const upperId = useEditorStore.getState().addBrick(definition.id, [5, 15, 5]);
+    if (!lowerId || !upperId) throw new Error('Expected test bricks to be created.');
+    const stud = definition.connectors.find((connector) => connector.type === 'stud');
+    const socket = definition.connectors.find((connector) => connector.type === 'socket');
+    if (!stud || !socket) throw new Error('The test brick needs a stud and socket.');
+    const connection = createConnection(lowerId, stud.id, upperId, socket.id);
+    useEditorStore.setState({ connections: [connection], selectedId: upperId });
+
+    useEditorStore.getState().flipSelected('up');
+    expect(useEditorStore.getState().connections).toEqual([]);
+
+    useEditorStore.getState().undo();
+    expect(useEditorStore.getState().connections).toEqual([connection]);
   });
 
   it('moves the selected brick one grid step and keeps the move undoable', () => {

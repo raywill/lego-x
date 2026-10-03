@@ -7,6 +7,7 @@ import type {
   Vec3Tuple,
 } from '../../types/model';
 import { getBrickBodyBounds, quantizeToGrid, snapBrickToGrid } from '../grid/gridEngine';
+import { bricksOverlap, COLLISION_EPSILON } from '../collision/collisionEngine';
 
 export type XZPoint = [x: number, z: number];
 
@@ -38,6 +39,7 @@ interface SupportCandidate {
 }
 
 const DROP_EPSILON = 1e-7;
+const SUPPORT_PROBE_DEPTH = COLLISION_EPSILON * 4;
 
 export function isBrickAboveBed(brick: BrickInstance, bedY = 0): boolean {
   if (!Number.isFinite(bedY)) throw new RangeError('bedY must be a finite number.');
@@ -109,6 +111,14 @@ export function computeDropPlacement(
     const overlap = intersectFootprints(draggedBounds, otherBounds);
     if (!overlap) continue;
 
+    // A bounding box alone cannot tell whether material exists under the
+    // footprint (for example, a frame lying flat has a real hole). Lower a
+    // copy by a tiny amount and reuse the cavity-aware collision engine. If
+    // the probe can enter without touching material, this is not a support.
+    if (!hasMaterialContact(alignedDragged, draggedBounds, other, otherBounds.max.y)) {
+      continue;
+    }
+
     candidates.push({
       brickId: other.id,
       topY: otherBounds.max.y,
@@ -135,6 +145,24 @@ export function computeDropPlacement(
     supportBrickId,
     contact,
   };
+}
+
+function hasMaterialContact(
+  dragged: BrickInstance,
+  draggedBounds: Box3,
+  support: BrickInstance,
+  supportTopY: number,
+): boolean {
+  const probe: BrickInstance = {
+    ...dragged,
+    position: [
+      dragged.position[0],
+      dragged.position[1] + supportTopY - draggedBounds.min.y - SUPPORT_PROBE_DEPTH,
+      dragged.position[2],
+    ],
+    rotation: [...dragged.rotation],
+  };
+  return bricksOverlap(probe, support);
 }
 
 function footprintRegion(bounds: Box3): XZContactRegion {

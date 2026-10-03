@@ -3,7 +3,6 @@ import {
   BRICK_UNIT,
   HISTORY_LIMIT,
   PROJECT_STORAGE_KEY,
-  ROTATION_STEP,
 } from '../config/brickConfig';
 import { getBrickDefinition } from '../bricks/catalog';
 import { getBrickGroundY } from '../bricks/geometry';
@@ -22,12 +21,20 @@ import {
   serializeProject,
 } from '../editor/projectModel';
 import type { DropResult } from '../editor/gravity/dropEngine';
-import { keepAssemblyAboveBed, keepBrickAboveBed } from '../editor/gravity/dropEngine';
-import { snapBrickToGrid } from '../editor/grid/gridEngine';
+import {
+  computeDropPlacement,
+  keepAssemblyAboveBed,
+  keepBrickAboveBed,
+} from '../editor/gravity/dropEngine';
+import { getBrickBodyBounds, snapBrickToGrid } from '../editor/grid/gridEngine';
 import {
   computeKeyboardMove,
   type GridDirection,
 } from '../editor/movement/keyboardMoveEngine';
+import {
+  rotateBrickByWorldQuarterTurn,
+  type QuarterTurnDirection,
+} from '../editor/rotation/orientationEngine';
 import { getWorldConnectors, type SnapCandidate } from '../editor/snapping/snapEngine';
 import type {
   BrickInstance,
@@ -38,6 +45,7 @@ import type {
 } from '../types/model';
 
 export type RotationDirection = 'left' | 'right' | -1 | 1;
+export type FlipDirection = 'up' | 'down';
 
 export interface DragState {
   phase: 'dragging' | 'dropping';
@@ -66,6 +74,7 @@ export interface EditorStore {
   future: ProjectSnapshot[];
   drag: EditorDragState | null;
   toast: string | null;
+  viewRightAxis: GridDirection;
 
   addBrick: (
     definitionId: string,
@@ -75,7 +84,9 @@ export interface EditorStore {
   ) => string | null;
   selectBrick: (id: string | null) => void;
   rotateSelected: (direction: RotationDirection) => void;
+  flipSelected: (direction: FlipDirection) => void;
   moveSelectedByGridStep: (direction: GridDirection) => boolean;
+  setViewRightAxis: (axis: GridDirection) => void;
   setSelectedColor: (color?: string) => void;
   duplicateSelected: () => string | null;
   deleteSelected: () => void;
@@ -158,14 +169,6 @@ const appendHistory = (
   snapshot: ProjectSnapshot,
 ): ProjectSnapshot[] => [...history, snapshot].slice(-HISTORY_LIMIT);
 
-const normaliseQuarterTurn = (angle: number): number => {
-  const fullTurn = Math.PI * 2;
-  let value = angle % fullTurn;
-  if (value > Math.PI) value -= fullTurn;
-  if (value <= -Math.PI) value += fullTurn;
-  return Math.abs(value) < 1e-10 ? 0 : value;
-};
-
 const sameTuple = (left: readonly number[], right: readonly number[]): boolean =>
   left.length === right.length && left.every((value, index) => value === right[index]);
 
@@ -228,6 +231,33 @@ const withCommittedProject = (
   ...extras,
 });
 
+function rotateAndLand(
+  selected: BrickInstance,
+  others: readonly BrickInstance[],
+  worldAxis: Vec3Tuple,
+  direction: QuarterTurnDirection,
+): BrickInstance | null {
+  const originalBottom = getBrickBodyBounds(selected).min.y;
+  const turned = rotateBrickByWorldQuarterTurn(selected, worldAxis, direction);
+  const turnedBounds = getBrickBodyBounds(turned);
+  const held = keepBrickAboveBed(snapBrickToGrid({
+    ...turned,
+    position: [
+      turned.position[0],
+      turned.position[1] + originalBottom - turnedBounds.min.y,
+      turned.position[2],
+    ],
+    rotation: [...turned.rotation],
+  }));
+  const drop = computeDropPlacement(held, others);
+  const landed = safeBrick({
+    ...held,
+    position: [...drop.position],
+    rotation: [...drop.rotation],
+  });
+  return hasBrickCollision(landed, others) ? null : landed;
+}
+
 export const useEditorStore = create<EditorStore>((set, get) => ({
   bricks: [],
   connections: [],
@@ -236,6 +266,7 @@ export const useEditorStore = create<EditorStore>((set, get) => ({
   future: [],
   drag: null,
   toast: null,
+  viewRightAxis: [1, 0],
 
   addBrick: (definitionId, position, rotation = [0, 0, 0], color) => {
     const definition = getBrickDefinition(definitionId);
@@ -273,13 +304,13 @@ export const useEditorStore = create<EditorStore>((set, get) => ({
     set((state) => {
       const selected = state.bricks.find((brick) => brick.id === selectedId);
       if (!selected) return state;
-      const rotation: EulerTuple = [
-        selected.rotation[0],
-        normaliseQuarterTurn(selected.rotation[1] + directionMultiplier * ROTATION_STEP),
-        selected.rotation[2],
-      ];
-      const rotated = safeBrick({ ...cloneBrick(selected), rotation });
-      if (hasBrickCollision(rotated, state.bricks)) {
+      const rotated = rotateAndLand(
+        selected,
+        state.bricks,
+        [0, 1, 0],
+        directionMultiplier as QuarterTurnDirection,
+      );
+      if (!rotated) {
         return { toast: '这里空间不够，积木转不过去' };
       }
       const bricks = state.bricks.map((brick): BrickInstance =>
@@ -288,6 +319,35 @@ export const useEditorStore = create<EditorStore>((set, get) => ({
         state,
         bricks,
         removeConnectionsForBrick(state.connections, selectedId),
+      );
+    });
+  },
+
+  flipSelected: (direction) => {
+    const { selectedId } = get();
+    if (!selectedId) return;
+    set((state) => {
+      if (state.drag) return state;
+      const selected = state.bricks.find((brick) => brick.id === selectedId);
+      if (!selected) return state;
+      const [axisX, axisZ] = state.viewRightAxis;
+      const flipped = rotateAndLand(
+        selected,
+        state.bricks,
+        [axisX, 0, axisZ],
+        direction === 'up' ? 1 : -1,
+      );
+      if (!flipped) {
+        return { toast: '这里空间不够，积木翻不过去' };
+      }
+      const bricks = state.bricks.map((brick): BrickInstance => (
+        brick.id === selectedId ? flipped : cloneBrick(brick)
+      ));
+      return withCommittedProject(
+        state,
+        bricks,
+        removeConnectionsForBrick(state.connections, selectedId),
+        { selectedId },
       );
     });
   },
@@ -316,6 +376,15 @@ export const useEditorStore = create<EditorStore>((set, get) => ({
       );
     });
     return moved;
+  },
+
+  setViewRightAxis: (axis) => {
+    if (Math.abs(axis[0]) + Math.abs(axis[1]) !== 1) return;
+    set((state) => (
+      state.viewRightAxis[0] === axis[0] && state.viewRightAxis[1] === axis[1]
+        ? state
+        : { viewRightAxis: [...axis] as GridDirection }
+    ));
   },
 
   setSelectedColor: (color) => {

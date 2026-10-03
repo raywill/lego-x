@@ -139,6 +139,29 @@ describe('computeDropPlacement', () => {
     expect(result.position[1]).toBe(5);
   });
 
+  it.each(['frame-square', 'frame-circle', 'frame-arch'])(
+    'falls through the real opening when a %s is lying flat',
+    (definitionId) => {
+      const frame = brick('frame', definitionId, [15, 5, 15], [Math.PI / 2, 0, 0]);
+      const dragged = brick('dragged', 'cube-1', [15, 60, 15]);
+      const result = computeDropPlacement(dragged, [frame]);
+
+      expect(result.supportBrickId).toBeNull();
+      expect(result.supportY).toBe(0);
+      expect(result.position[1]).toBe(5);
+    },
+  );
+
+  it('lands on the solid rail of a flat hollow frame', () => {
+    const frame = brick('frame', 'frame-square', [15, 5, 15], [Math.PI / 2, 0, 0]);
+    const dragged = brick('dragged', 'cube-1', [5, 60, 15]);
+    const result = computeDropPlacement(dragged, [frame]);
+
+    expect(result.supportBrickId).toBe('frame');
+    expect(result.supportY).toBe(10);
+    expect(result.position[1]).toBe(15);
+  });
+
   it('lifts rotated geometry fully above the print bed', () => {
     const belowBed = brick(
       'below-bed',
