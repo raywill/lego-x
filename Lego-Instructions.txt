@@ -1,0 +1,1380 @@
+Build a Web-Based “Digital Bricks” 3D Modeling MVP
+
+0. Product definition
+
+Build a browser-based 3D modeling application for children around age 10.
+
+The product is not CAD software.
+
+The product is not a professional 3D modeling tool.
+
+The mental model is:
+
+Give the child a box of digital building bricks.
+The child picks up a brick, drags it into the scene, and compatible connectors automatically snap together.
+
+The child should be able to build:
+
+* cars
+* houses
+* tables
+* chairs
+* robots
+* animals
+* simple machines
+* arbitrary structures
+
+without learning:
+
+* XYZ coordinates
+* mesh editing
+* vertex manipulation
+* Boolean operations
+* complex camera controls
+* CAD terminology
+
+The central interaction is:
+
+Pick → Drag → Snap → Rotate → Build → Print
+
+The application should feel closer to building with physical construction bricks than operating a CAD program.
+
+⸻
+
+1. Critical product principle
+
+The application must be intentionally limited.
+
+Do NOT turn this into Tinkercad, Blender, Fusion 360, or a general-purpose CAD system.
+
+The child should not normally see:
+
+* X/Y/Z numeric fields
+* transform matrices
+* object property panels
+* mesh topology
+* vertices
+* faces
+* edges
+* complex modifier systems
+* Boolean menus
+* material editors
+* complicated hierarchy panels
+
+The application should hide geometric complexity behind a simple interaction model.
+
+The child should think:
+
+“这个积木可以卡到那里。”
+
+not:
+
+“我要把这个物体的 Y 坐标改成 20mm。”
+
+⸻
+
+2. Technology
+
+Use:
+
+* React
+* TypeScript
+* Vite
+* Three.js
+* React Three Fiber
+* Zustand
+
+Use a clean modular architecture.
+
+Browser-only for MVP.
+
+No backend.
+
+No login.
+
+No cloud database.
+
+Persist projects in localStorage.
+
+The application must run with:
+
+npm install
+npm run dev
+
+and build with:
+
+npm run build
+
+⸻
+
+3. MVP scope
+
+Implement these capabilities:
+
+1. 3D scene
+2. simple ground / print bed
+3. brick palette
+4. drag a brick into the scene
+5. connector-based snapping
+6. automatic alignment
+7. rotate selected brick
+8. duplicate brick
+9. delete brick
+10. undo
+11. redo
+12. save project locally
+13. load project
+14. clear project
+15. STL export
+16. basic print-area check
+17. simple visual feedback during snapping
+
+Do not implement accounts, multiplayer, cloud storage, advanced CAD, or a full slicer.
+
+⸻
+
+4. The most important feature: connector-based construction
+
+The application must NOT rely on generic surface-to-surface snapping.
+
+Every brick has explicit connectors.
+
+A connector describes a place and orientation on the brick where another compatible connector can attach.
+
+Conceptually:
+
+type ConnectorType =
+  | "stud"
+  | "socket"
+  | "rod"
+  | "hole"
+  | "hinge";
+
+Each connector should contain:
+
+interface Connector {
+  id: string;
+  type: ConnectorType;
+  position: [number, number, number];
+  rotation: [number, number, number];
+  compatibleWith: ConnectorType[];
+  polarity?: "male" | "female" | "neutral";
+  snapDistance: number;
+}
+
+The exact implementation can differ, but the concept must remain.
+
+⸻
+
+5. Snapping behavior
+
+When the user drags a brick close to another brick:
+
+1. Find nearby compatible connectors.
+2. Calculate the transform required to align them.
+3. Move the dragged brick toward that transform.
+4. Show a visual preview.
+5. When the distance is sufficiently small, lock the connection.
+6. The connected brick becomes part of the assembly.
+7. The rest of the brick is allowed to remain completely free.
+
+This last point is extremely important.
+
+Partial connection is allowed.
+
+Example:
+
+A long rectangular brick can connect through one connector to another brick while most of the long brick extends outward.
+
+Do NOT require:
+
+████████
+████████
+
+to fully overlap another surface.
+
+This is allowed:
+
+      ███████████
+      █
+███████
+
+One connector is enough.
+
+The rest can be suspended in space.
+
+This is essential for building:
+
+* car roofs
+* wings
+* bridges
+* tables
+* balconies
+* cranes
+* robot arms
+* overhanging structures
+
+⸻
+
+6. Snap preview
+
+While dragging:
+
+* show the nearest compatible connector
+* highlight it
+* show the predicted final position
+* make the brick visually “jump” toward the connection when close enough
+
+The effect should feel like a physical magnetic connection.
+
+But do not use real physics simulation.
+
+Use deterministic geometric snapping.
+
+The user should feel:
+
+“Click.”
+
+when a connection occurs.
+
+⸻
+
+7. Connector coordinate system
+
+Each brick definition must be independent of the scene.
+
+For example:
+
+interface BrickDefinition {
+  id: string;
+  name: string;
+  size: {
+    x: number;
+    y: number;
+    z: number;
+  };
+  geometry: GeometryDefinition;
+  connectors: ConnectorDefinition[];
+}
+
+Connector positions are defined in local brick coordinates.
+
+When the brick rotates or moves, transform connector positions into world coordinates.
+
+Do not hard-code snapping behavior for individual brick types.
+
+The snap engine must operate on generic connector data.
+
+This is important because future bricks should be added mostly by data, not by rewriting the editor.
+
+⸻
+
+8. Standard dimensions
+
+Do NOT claim physical compatibility with genuine LEGO products.
+
+Create an original digital-brick dimensional system inspired by the general idea of construction bricks.
+
+Use millimeters internally.
+
+Define a configurable base unit:
+
+BRICK_UNIT = 10
+
+Use multiples of this unit for the first MVP.
+
+For example:
+
+* 10 × 10 × 10 mm
+* 20 × 10 × 10 mm
+* 20 × 20 × 10 mm
+* 40 × 10 × 10 mm
+* etc.
+
+The exact physical dimensions should be easy to change later.
+
+Do not hard-code dimensions throughout the application.
+
+Create a central constants/configuration file.
+
+⸻
+
+9. First brick library
+
+Keep the library deliberately small.
+
+Do NOT create semantic objects such as:
+
+* car
+* house
+* table
+* chair
+* robot
+
+Those should be things the child constructs from basic bricks.
+
+The first library should contain approximately 25 generic construction pieces.
+
+A. Basic blocks
+
+Implement:
+
+1. Small cube
+2. 1×2 rectangular block
+3. 2×2 rectangular block
+4. 2×4 rectangular block
+5. Long rectangular beam
+6. Thin rectangular plate
+7. Square plate
+8. Long thin plate
+
+B. Cylindrical pieces
+
+9. Cylinder
+10. Thin cylinder / disc
+11. Rod
+12. Hollow cylinder / ring
+
+C. Triangular / sloped pieces
+
+13. Triangular prism
+14. Right triangular prism
+15. Wedge
+16. Roof / double-slope wedge
+17. Trapezoid prism
+
+Triangles are important.
+
+A child should be able to construct roofs, vehicle bodies, ramps, supports, etc.
+
+D. Curved pieces
+
+18. Half cylinder
+19. Hemisphere
+20. Sphere
+
+E. Mechanical pieces
+
+21. Wheel
+22. Axle
+23. Hinge
+24. Large circular wheel
+25. Simple steering wheel / circular handle
+
+These are still generic construction components.
+
+Do not create a “car component” or “house component”.
+
+⸻
+
+10. Component palette
+
+The palette should be extremely simple.
+
+Do not build a complex CAD-style component browser.
+
+Use a compact panel containing visual icons / miniature previews.
+
+For example:
+
+┌──────────────────────────────┐
+│  DIGITAL BRICKS              │
+│                              │
+│  ■  ▬  ▪  ▰  ━              │
+│  ●  ○  │  △  ◢              │
+│  ◒  ◉  ⌒  ◇                 │
+│                              │
+└──────────────────────────────┘
+
+The user should identify a brick primarily by shape.
+
+Each palette item should have:
+
+* miniature 3D preview
+* short name
+* drag interaction
+
+Do not require the child to read technical names.
+
+⸻
+
+11. Drag interaction
+
+Primary interaction:
+
+Drag a brick from the palette into the scene.
+
+When the brick is being dragged:
+
+* display it semi-transparently
+* project it onto the construction area
+* search for nearby connectors
+* show snapping preview
+
+When released:
+
+* if near a compatible connector, snap
+* otherwise place it at the current location
+
+Do not make every placement require a connector.
+
+A child must also be able to place the first brick freely on the print bed.
+
+⸻
+
+12. Ground / print bed
+
+Show a simple rectangular print bed.
+
+The print bed represents the physical 3D printer build area.
+
+The user should be able to understand:
+
+“这些东西最后会被打印出来。”
+
+The print bed should:
+
+* have a visible boundary
+* show a simple grid
+* provide a ground plane
+* prevent objects from accidentally disappearing below the bed
+
+No need for a full slicer.
+
+⸻
+
+13. Camera
+
+Camera control must be extremely simple.
+
+Provide:
+
+* orbit
+* zoom
+* pan
+
+Also provide three simple buttons:
+
+TOP
+FRONT
+SIDE
+
+and:
+
+HOME
+
+to return to a useful default camera position.
+
+Do not expose camera parameters.
+
+The child should not need to understand perspective projection.
+
+⸻
+
+14. Selecting objects
+
+Click a brick to select it.
+
+Selected brick should have a clear visual outline/highlight.
+
+Show only a tiny floating toolbar:
+
+↻ Rotate
+⧉ Copy
+🗑 Delete
+
+Do not open a property inspector.
+
+⸻
+
+15. Rotation
+
+Rotation must be simple.
+
+Provide:
+
+Rotate Left
+Rotate Right
+
+and optionally:
+
+Rotate 90°
+
+Use discrete rotations for the MVP.
+
+Default rotation increments:
+
+90°
+
+Do not require the user to manipulate Euler angles.
+
+If a brick has connectors, recalculate connector world positions after rotation.
+
+After rotation, if a compatible connector is close to another connector, allow snapping.
+
+⸻
+
+16. Undo / redo
+
+Implement:
+
+* Undo
+* Redo
+
+Keyboard shortcuts:
+
+Ctrl/Cmd + Z
+Ctrl/Cmd + Shift + Z
+
+Undo should cover:
+
+* add brick
+* delete brick
+* move brick
+* rotate brick
+* duplicate brick
+* snap connection
+
+Use Zustand or a simple command/history system.
+
+Keep the implementation reliable rather than sophisticated.
+
+⸻
+
+17. Copy
+
+When a brick is selected:
+
+Copy
+
+creates a duplicate.
+
+The duplicate should appear slightly offset from the original.
+
+Then the child can drag it to another connector.
+
+⸻
+
+18. Delete
+
+Delete the selected brick.
+
+If deleting a brick that is connected to others:
+
+* do not automatically delete the whole assembly
+* remove only that brick
+* preserve the other bricks
+
+Connections involving that brick should be removed cleanly.
+
+⸻
+
+19. Project data model
+
+Store the scene as a list of brick instances.
+
+Example:
+
+interface BrickInstance {
+  id: string;
+  definitionId: string;
+  position: [number, number, number];
+  rotation: [number, number, number];
+  connections: Connection[];
+}
+
+Connection:
+
+interface Connection {
+  brickA: string;
+  connectorA: string;
+  brickB: string;
+  connectorB: string;
+}
+
+Do not store baked world-space connector positions.
+
+Connector positions should always be derived from:
+
+brick definition
++
+brick transform
+
+This keeps the model stable.
+
+⸻
+
+20. STL export
+
+Provide:
+
+Export STL
+
+The export should combine all visible brick geometry into one printable mesh.
+
+Use millimeters.
+
+The STL should contain the actual geometry.
+
+The output must be suitable for opening in:
+
+* Bambu Studio
+* OrcaSlicer
+* other standard slicers
+
+Do not implement slicing.
+
+Do not implement printer-specific G-code.
+
+STL is sufficient for MVP.
+
+⸻
+
+21. Important STL consideration
+
+Digital connections are logical connections.
+
+The exported model must still produce physical geometry.
+
+For example:
+
+Brick A
+   │
+   │ connector
+   ▼
+Brick B
+
+must result in overlapping/interlocking geometry that can actually be printed.
+
+Do not rely on an invisible “connection relationship” in the STL.
+
+The final mesh must contain real solid geometry.
+
+⸻
+
+22. Printability checks
+
+Only implement simple checks.
+
+Show warnings for:
+
+A. Outside print bed
+
+If any geometry exceeds the print bed:
+
+⚠ This model is outside the print area.
+
+B. Floating structure
+
+If a brick is not connected to:
+
+* the print bed
+* or another connected assembly
+
+show:
+
+⚠ This part is floating.
+
+Do not prevent the user from building it.
+
+Warnings only.
+
+C. Excessive overhang
+
+Implement only a basic heuristic.
+
+Do not attempt to build a professional support-generation system.
+
+Show:
+
+⚠ Some parts may need support.
+
+The user can still export.
+
+⸻
+
+23. Save / Load
+
+Use localStorage.
+
+Provide:
+
+New
+Save
+Load
+
+For MVP, one local project is enough.
+
+Project format should be JSON.
+
+Example:
+
+{
+  "version": 1,
+  "bricks": [],
+  "connections": []
+}
+
+Make the schema versioned.
+
+⸻
+
+24. UI layout
+
+Use a very simple layout.
+
+┌──────────────────────────────────────────────┐
+│ Digital Bricks     Undo Redo    Save Export │
+├──────────────┬───────────────────────────────┤
+│              │                               │
+│   BRICKS     │                               │
+│              │                               │
+│   ■  ▬  ▪    │          3D SCENE             │
+│   ▰  ━  ●    │                               │
+│   ○  │  △    │                               │
+│   ◢  ◒  ◉    │                               │
+│              │                               │
+│              │                               │
+├──────────────┴───────────────────────────────┤
+│              print bed                       │
+└──────────────────────────────────────────────┘
+
+Avoid:
+
+* property panels
+* complicated menus
+* inspector panels
+* dozens of buttons
+
+The application should visually communicate the product concept immediately.
+
+⸻
+
+25. Visual style
+
+Use a clean, friendly visual language.
+
+It can be colorful, but do not copy LEGO’s exact visual identity.
+
+Use:
+
+* simple rounded UI
+* large clickable controls
+* clear icons
+* high contrast
+* minimal text
+* simple 3D materials
+* soft shadows
+
+The bricks themselves should be visually distinct by shape.
+
+Do not make everything gray.
+
+But avoid excessive decoration.
+
+The important thing is the geometry.
+
+⸻
+
+26. Important interaction detail: connector visualization
+
+Normally connectors should be invisible or subtle.
+
+When dragging:
+
+* show nearby compatible connectors
+* highlight the best candidate
+* show a small connection indicator
+
+For example:
+
+        ●  ← compatible connector
+        │
+        │
+   ┌──────────┐
+   │  brick   │
+   └──────────┘
+
+When snapped:
+
+        ●
+        │
+   ┌────┴─────┐
+   │  brick   │
+   └──────────┘
+
+The visual feedback should make the connection understandable without text.
+
+⸻
+
+27. Snap algorithm requirements
+
+Implement the snap engine as an independent module.
+
+For every drag update:
+
+1. Get dragged brick connectors in world space.
+2. Get nearby connectors from other bricks.
+3. Filter incompatible connector types.
+4. Calculate candidate transforms.
+5. Calculate distance between connector locations.
+6. Calculate orientation compatibility.
+7. Rank candidates.
+8. Choose the closest valid candidate.
+9. Preview the resulting brick transform.
+10. On release, commit the connection if within threshold.
+
+Do not search every connector against every other connector if the scene becomes large.
+
+For MVP, a simple spatial search is acceptable.
+
+Keep the implementation modular so a spatial index can be added later.
+
+⸻
+
+28. Connector orientation
+
+A connector is not just a point.
+
+It has:
+
+position
++
+direction
++
+orientation
+
+Two connectors should only snap when their orientations are compatible.
+
+For example:
+
+male connector
+      ↓
+female connector
+      ↑
+
+After alignment:
+
+male
+ ↓
+female
+ ↑
+
+The exact mathematical implementation is up to you.
+
+Use Three.js vectors/quaternions rather than manually manipulating Euler angles where appropriate.
+
+⸻
+
+29. Multiple connections
+
+A brick can have many connectors.
+
+Example:
+
+┌───────────────────────┐
+│  ●   ●   ●   ●   ●   │
+└───────────────────────┘
+
+A long brick may connect to multiple bricks.
+
+The system must therefore treat connections as a graph.
+
+Do not assume:
+
+one brick = one parent
+
+A brick can have:
+
+0 connections
+1 connection
+2 connections
+10 connections
+...
+
+⸻
+
+30. Assembly behavior
+
+Do not implement physics.
+
+When two bricks connect:
+
+* preserve the existing assembly
+* move only the dragged brick into the snap transform
+* establish the logical connection
+
+If the user later moves a connected brick, define simple behavior:
+
+MVP rule
+
+Dragging a selected brick moves only that brick.
+
+It does NOT automatically drag the entire connected assembly.
+
+This keeps the interaction predictable.
+
+Later versions can add group movement.
+
+⸻
+
+31. Component definitions must be data-driven
+
+Create something like:
+
+src/
+  components/
+    definitions/
+      cube.ts
+      block1x2.ts
+      block2x2.ts
+      block2x4.ts
+      plate.ts
+      cylinder.ts
+      triangle.ts
+      wedge.ts
+      wheel.ts
+      axle.ts
+      hinge.ts
+      ...
+
+But the editor should consume a generic:
+
+BrickDefinition
+
+Do not write:
+
+if (brick.type === "car")
+
+or:
+
+if (brick.type === "house")
+
+The application should not know what a “car” is.
+
+A car is simply an arrangement of bricks.
+
+⸻
+
+32. Geometry implementation
+
+For the first version, use procedural Three.js geometry where practical:
+
+* BoxGeometry
+* CylinderGeometry
+* SphereGeometry
+* custom BufferGeometry for triangular prisms
+* custom BufferGeometry for wedges
+
+Avoid loading large external 3D assets.
+
+The initial component library should be lightweight.
+
+⸻
+
+33. Architecture
+
+Suggested structure:
+
+src/
+  app/
+  components/
+    BrickPalette/
+    Scene/
+    Toolbar/
+    PrintBed/
+    Selection/
+  bricks/
+    definitions/
+    geometry/
+    connectors/
+  editor/
+    selection/
+    dragging/
+    snapping/
+    history/
+  export/
+    stl/
+  store/
+  utils/
+  types/
+
+Separate:
+
+brick definition
+geometry
+connector definition
+editor state
+snap engine
+rendering
+export
+
+Do not mix them together.
+
+⸻
+
+34. MVP development order
+
+Build in this order.
+
+Phase 1
+
+Get a cube into the scene.
+
+Implement:
+
+* Three.js scene
+* camera
+* lighting
+* print bed
+* one cube
+
+Phase 2
+
+Implement:
+
+* brick palette
+* drag into scene
+* selection
+* delete
+* duplicate
+
+Phase 3
+
+Implement:
+
+* connector definitions
+* connector visualization
+* snap detection
+* snap preview
+* snap commit
+
+This is the most important phase.
+
+Phase 4
+
+Add:
+
+* 25 brick definitions
+* rotation
+* undo/redo
+
+Phase 5
+
+Add:
+
+* save/load
+* STL export
+
+Phase 6
+
+Add:
+
+* printability warnings
+* polish
+* empty states
+* onboarding hints
+
+⸻
+
+35. Acceptance test: simple house
+
+The finished MVP must allow a child to build something approximately like:
+
+        /\
+       /  \
+      /____\
+     |      |
+     |      |
+     |      |
+     |______|
+
+using only basic blocks, plates, triangular/wedge pieces.
+
+No “house” prefab.
+
+⸻
+
+36. Acceptance test: car
+
+The child should be able to build:
+
+       ______
+  ____/      \____
+ /               \
+O                 O
+
+using:
+
+* blocks
+* plates
+* wedges
+* wheels
+* axles
+
+No “car” prefab.
+
+⸻
+
+37. Acceptance test: table
+
+The child should be able to construct:
+
+ ┌──────────────┐
+ └──────────────┘
+   │          │
+   │          │
+   │          │
+
+using:
+
+* plate
+* beams
+* blocks
+
+The tabletop can overhang the legs.
+
+This is an important test of the connector model.
+
+⸻
+
+38. Acceptance test: overhang
+
+Build:
+
+          █████████
+              █
+              █
+███████████████
+
+The top structure must be allowed to extend beyond the supporting brick.
+
+The application must NOT force all surfaces to align.
+
+This is a core acceptance criterion.
+
+⸻
+
+39. Acceptance test: partial connection
+
+Two long pieces should be able to connect through only one connector:
+
+████████████████
+        ●
+        │
+        ●
+████████
+
+The remaining geometry may extend freely.
+
+⸻
+
+40. What NOT to build
+
+Do not build these in MVP:
+
+* Boolean modeling
+* arbitrary mesh editing
+* vertex editing
+* sculpting
+* extrusion tools
+* hole-cutting tools
+* advanced materials
+* textures
+* animation
+* physics simulation
+* multiplayer
+* accounts
+* cloud synchronization
+* AI model generation
+* natural-language modeling
+* full slicer
+* support generation
+* printer control
+* advanced measurement tools
+* complex constraints
+* parametric CAD
+* professional object hierarchy
+* advanced camera controls
+
+If a feature is not necessary for:
+
+pick → drag → snap → build → export
+
+leave it out.
+
+⸻
+
+41. Engineering quality requirements
+
+The code must be:
+
+* TypeScript
+* strongly typed
+* modular
+* readable
+* reasonably tested
+* free of unnecessary dependencies
+
+Avoid giant React components.
+
+Avoid global mutable state outside Zustand.
+
+Avoid hard-coded brick-specific snapping logic.
+
+The snap engine must be independently testable.
+
+Write unit tests for:
+
+1. connector compatibility
+2. connector alignment
+3. snap transform
+4. rotation
+5. connection creation
+6. connection deletion
+7. serialization/deserialization
+
+⸻
+
+42. Important product constraint
+
+Do not optimize for the number of available bricks.
+
+Optimize for:
+
+How many different things can a child make from a small number of bricks?
+
+The system should demonstrate combinatorial creativity.
+
+A small primitive library should be powerful enough to make:
+
+* a car
+* a house
+* a chair
+* a table
+* a bridge
+* a robot
+* a tower
+* a spaceship
+
+without adding special-purpose templates.
+
+⸻
+
+43. Future extensibility
+
+Design the architecture so future versions can add:
+
+More connector types
+
+stud
+socket
+rod
+hole
+hinge
+magnet
+
+More transformations
+
+90°
+45°
+free rotation
+
+Group movement
+
+Select multiple connected bricks and move them together.
+
+Real physical tolerances
+
+Eventually allow:
+
+fit tolerance
+clearance
+friction
+
+for actual 3D-printable connector systems.
+
+3MF export
+
+Add after STL is reliable.
+
+Do not implement these now.
+
+⸻
+
+44. First-run experience
+
+When the application starts with an empty scene, show a very small hint:
+
+拖一个积木进来
+
+Then:
+
+靠近另一个积木
+它们会自动卡住
+
+Then let the user discover the rest.
+
+Do not show a long tutorial.
+
+⸻
+
+45. Final UX test
+
+Before considering the MVP complete, perform this mental test:
+
+Give the application to a 10-year-old who has never used CAD.
+
+Tell them only:
+
+“你可以像搭积木一样搭东西。”
+
+Then observe whether they can:
+
+1. find a block
+2. put it into the scene
+3. add another block
+4. make two blocks snap
+5. rotate one
+6. build something that overhangs
+7. delete a block
+8. make a simple car or house
+9. export the result
+
+without needing to understand coordinates.
+
+If they cannot, simplify the UI and interaction before adding features.
+
+⸻
+
+46. Definition of Done
+
+The MVP is complete when:
+
+* the application starts successfully
+* a child can drag bricks into a 3D scene
+* bricks have standardized connectors
+* compatible connectors snap automatically
+* one connection can hold an otherwise floating/overhanging brick
+* bricks can rotate
+* bricks can be duplicated/deleted
+* undo/redo works
+* projects can be saved/loaded
+* at least 25 generic brick types exist
+* a house can be constructed
+* a car can be constructed
+* a table can be constructed
+* STL export works
+* exported STL opens successfully in a standard slicer
+* basic print-area warnings work
+* there is no need for XYZ coordinate editing
+
+Most importantly:
+
+The application should feel like digital construction, not 3D CAD.
+
+Start by implementing the smallest working version.
+
+Do not build the entire future roadmap before the basic drag-and-snap interaction works.
+
+After each major phase, keep the application runnable.
