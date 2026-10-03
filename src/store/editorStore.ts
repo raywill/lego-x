@@ -28,12 +28,7 @@ import {
   computeKeyboardMove,
   type GridDirection,
 } from '../editor/movement/keyboardMoveEngine';
-import {
-  getWorldConnectors,
-  isAxisAlignedConnectorNormal,
-  isSlopedSnapCandidate,
-  type SnapCandidate,
-} from '../editor/snapping/snapEngine';
+import { getWorldConnectors, type SnapCandidate } from '../editor/snapping/snapEngine';
 import type {
   BrickInstance,
   Connection,
@@ -131,6 +126,30 @@ const cloneBrick = (brick: BrickInstance): BrickInstance => ({
 const safeBrick = (brick: BrickInstance): BrickInstance =>
   keepBrickAboveBed(snapBrickToGrid(cloneBrick(brick)));
 
+const normaliseProject = (
+  bricks: readonly BrickInstance[],
+  connections: readonly Connection[],
+): ProjectSnapshot => {
+  const alignedBricks = keepAssemblyAboveBed(bricks.map(safeBrick));
+  const alignedConnections: Connection[] = [];
+  for (const connection of connections) {
+    if (isConnectionValid(connection, alignedBricks, alignedConnections)) {
+      alignedConnections.push({ ...connection });
+    }
+  }
+  const connectedPairs = new Set(alignedConnections
+    .filter((connection) => connectionUsesSlopedSurface(connection, alignedBricks))
+    .map((connection) => brickPairKey(connection.brickA, connection.brickB)));
+  const collisionFreeBricks = separateOverlappingBricks(alignedBricks, connectedPairs);
+  const validConnections: Connection[] = [];
+  for (const connection of alignedConnections) {
+    if (isConnectionValid(connection, collisionFreeBricks, validConnections)) {
+      validConnections.push({ ...connection });
+    }
+  }
+  return { bricks: collisionFreeBricks, connections: validConnections };
+};
+
 const snapshotOf = (state: Pick<EditorStore, 'bricks' | 'connections'>): ProjectSnapshot =>
   cloneProjectSnapshot({ bricks: state.bricks, connections: state.connections });
 
@@ -156,6 +175,9 @@ const connectionKey = (connection: Connection): string => {
   return left < right ? `${left}\u0001${right}` : `${right}\u0001${left}`;
 };
 
+const isAxisAlignedNormal = (normal: readonly number[]): boolean =>
+  normal.filter((component) => Math.abs(component) > 1e-5).length === 1;
+
 const connectionUsesSlopedSurface = (
   connection: Connection,
   bricks: readonly BrickInstance[],
@@ -172,87 +194,8 @@ const connectionUsesSlopedSurface = (
     .find((connector) => connector.connectorId === connection.connectorB);
   return Boolean(
     connectorA && connectorB
-    && (
-      !isAxisAlignedConnectorNormal(connectorA.normal)
-      || !isAxisAlignedConnectorNormal(connectorB.normal)
-    ),
+    && (!isAxisAlignedNormal(connectorA.normal) || !isAxisAlignedNormal(connectorB.normal)),
   );
-};
-
-/**
- * A sloped connection can belong to a larger graph. Preserve every transform
- * in that connected component so project loading and undo/redo cannot shear
- * the assembly by independently rounding one brick back onto the body grid.
- */
-const connectorLockedBrickIds = (
-  bricks: readonly BrickInstance[],
-  connections: readonly Connection[],
-): Set<string> => {
-  const locked = new Set<string>();
-  for (const connection of connections) {
-    if (!connectionUsesSlopedSurface(connection, bricks)) continue;
-    locked.add(connection.brickA);
-    locked.add(connection.brickB);
-  }
-
-  let changed = true;
-  while (changed) {
-    changed = false;
-    for (const connection of connections) {
-      if (!locked.has(connection.brickA) && !locked.has(connection.brickB)) continue;
-      if (!locked.has(connection.brickA)) {
-        locked.add(connection.brickA);
-        changed = true;
-      }
-      if (!locked.has(connection.brickB)) {
-        locked.add(connection.brickB);
-        changed = true;
-      }
-    }
-  }
-  return locked;
-};
-
-const normaliseProject = (
-  bricks: readonly BrickInstance[],
-  connections: readonly Connection[],
-): ProjectSnapshot => {
-  const lockedBrickIds = connectorLockedBrickIds(bricks, connections);
-  let alignedBricks = bricks.map((brick) => (
-    lockedBrickIds.has(brick.id) ? cloneBrick(brick) : safeBrick(brick)
-  ));
-
-  // If an imported connector-locked assembly is below the bed, lift all of
-  // its locked bricks together so their exact connector alignment survives.
-  const lockedBricks = alignedBricks.filter((brick) => lockedBrickIds.has(brick.id));
-  if (lockedBricks.length > 0) {
-    const raisedLocked = new Map(
-      keepAssemblyAboveBed(lockedBricks).map((brick) => [brick.id, brick]),
-    );
-    alignedBricks = alignedBricks.map((brick) => raisedLocked.get(brick.id) ?? brick);
-  }
-
-  const alignedConnections: Connection[] = [];
-  for (const connection of connections) {
-    if (isConnectionValid(connection, alignedBricks, alignedConnections)) {
-      alignedConnections.push({ ...connection });
-    }
-  }
-  const connectedPairs = new Set(alignedConnections
-    .filter((connection) => connectionUsesSlopedSurface(connection, alignedBricks))
-    .map((connection) => brickPairKey(connection.brickA, connection.brickB)));
-  const collisionFreeBricks = separateOverlappingBricks(
-    alignedBricks,
-    connectedPairs,
-    lockedBrickIds,
-  );
-  const validConnections: Connection[] = [];
-  for (const connection of alignedConnections) {
-    if (isConnectionValid(connection, collisionFreeBricks, validConnections)) {
-      validConnections.push({ ...connection });
-    }
-  }
-  return { bricks: collisionFreeBricks, connections: validConnections };
 };
 
 const validConnection = (
@@ -635,22 +578,13 @@ export const useEditorStore = create<EditorStore>((set, get) => ({
             position: [...drag.drop.position],
             rotation: [...drag.drop.rotation],
           };
-      const slopedSnap = Boolean(
-        drag.candidate?.committable && isSlopedSnapCandidate(drag.candidate),
-      );
-      // Free placement and cardinal snaps remain body-grid aligned. A sloped
-      // connector is the sole exception: its exact connector frame controls
-      // the transform and must not be rounded after the preview is accepted.
-      const finalPreview = slopedSnap
-        ? keepBrickAboveBed(rawFinalPreview)
-        : safeBrick(rawFinalPreview);
+      const finalPreview = safeBrick(rawFinalPreview);
       const snapContactBrickIds = drag.candidate?.committable
         ? new Set([
             { source: drag.candidate.source, target: drag.candidate.target },
             ...drag.candidate.contacts,
           ].filter(({ source, target }) => (
-            !isAxisAlignedConnectorNormal(source.normal)
-              || !isAxisAlignedConnectorNormal(target.normal)
+            !isAxisAlignedNormal(source.normal) || !isAxisAlignedNormal(target.normal)
           )).map(({ target }) => target.brickId))
         : new Set<string>();
       const collidingBrickIds = getCollidingBrickIds(

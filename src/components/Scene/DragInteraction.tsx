@@ -5,11 +5,10 @@ import { getBrickDefinition } from '../../bricks/catalog';
 import { BRICK_UNIT, PRINT_BED } from '../../config/brickConfig';
 import { hasBrickCollision } from '../../editor/collision/collisionEngine';
 import { computeDropPlacement, isBrickAboveBed } from '../../editor/gravity/dropEngine';
-import { isSnapPlacementGridCompatible } from '../../editor/snapping/snapPlacementPolicy';
+import { isBrickOnGrid } from '../../editor/grid/gridEngine';
 import {
   findBestSnap,
   getWorldConnectors,
-  isSlopedSnapCandidate,
   type WorldConnector,
 } from '../../editor/snapping/snapEngine';
 import { useEditorStore } from '../../store/editorStore';
@@ -40,6 +39,10 @@ function collectTargetConnectors(draggedBrickId: string): WorldConnector[] {
     if (definition) result.push(...getWorldConnectors(brick, definition));
   }
   return result;
+}
+
+function isAxisAligned(normal: readonly number[]): boolean {
+  return normal.filter((component) => Math.abs(component) > 1e-5).length === 1;
 }
 
 function playSnapFeedback(): void {
@@ -207,11 +210,11 @@ export function DragInteraction() {
           // Axis-aligned connectors must pass the full body-overlap check.
           // Sloped connector pairs are trusted at their exact mating surface,
           // because their axis-aligned bounds overlap even when the solids do not.
-          const slopedContact = isSlopedSnapCandidate({ source, target });
+          const slopedContact = !isAxisAligned(source.normal) || !isAxisAligned(target.normal);
           const ignoredTargets = slopedContact
             ? new Set([target.brickId])
             : new Set<string>();
-          return isSnapPlacementGridCompatible({ source, target }, transformed)
+          return isBrickOnGrid(transformed)
             && !hasBrickCollision(transformed, state.bricks, ignoredTargets);
         },
       });
@@ -226,8 +229,7 @@ export function DragInteraction() {
       // candidate preserves the connection geometry instead of lifting it and
       // silently breaking the snap.
       const candidate = snappedPreview && (
-        !isBrickAboveBed(snappedPreview)
-        || !isSnapPlacementGridCompatible(nearestCandidate!, snappedPreview)
+        !isBrickAboveBed(snappedPreview) || !isBrickOnGrid(snappedPreview)
       )
         ? null
         : nearestCandidate;
