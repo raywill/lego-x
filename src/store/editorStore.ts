@@ -24,6 +24,10 @@ import {
 import type { DropResult } from '../editor/gravity/dropEngine';
 import { keepAssemblyAboveBed, keepBrickAboveBed } from '../editor/gravity/dropEngine';
 import { snapBrickToGrid } from '../editor/grid/gridEngine';
+import {
+  computeKeyboardMove,
+  type GridDirection,
+} from '../editor/movement/keyboardMoveEngine';
 import { getWorldConnectors, type SnapCandidate } from '../editor/snapping/snapEngine';
 import type {
   BrickInstance,
@@ -71,6 +75,7 @@ export interface EditorStore {
   ) => string | null;
   selectBrick: (id: string | null) => void;
   rotateSelected: (direction: RotationDirection) => void;
+  moveSelectedByGridStep: (direction: GridDirection) => boolean;
   setSelectedColor: (color?: string) => void;
   duplicateSelected: () => string | null;
   deleteSelected: () => void;
@@ -285,6 +290,32 @@ export const useEditorStore = create<EditorStore>((set, get) => ({
         removeConnectionsForBrick(state.connections, selectedId),
       );
     });
+  },
+
+  moveSelectedByGridStep: (direction) => {
+    let moved = false;
+    set((state) => {
+      if (state.drag || !state.selectedId) return state;
+      const selected = state.bricks.find((brick) => brick.id === state.selectedId);
+      if (!selected) return state;
+      const result = computeKeyboardMove(selected, state.bricks, direction);
+      if (!result) return { toast: '这个方向被挡住了，积木过不去' };
+      moved = true;
+      const bricks = state.bricks.map((brick) =>
+        brick.id === selected.id ? cloneBrick(result.brick) : cloneBrick(brick));
+      return withCommittedProject(
+        state,
+        bricks,
+        removeConnectionsForBrick(state.connections, selected.id),
+        {
+          selectedId: selected.id,
+          toast: result.climbedLayers > 0
+            ? `自动向上跨了 ${result.climbedLayers} 层`
+            : null,
+        },
+      );
+    });
+    return moved;
   },
 
   setSelectedColor: (color) => {

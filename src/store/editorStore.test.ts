@@ -35,6 +35,17 @@ describe('editor store', () => {
     expect(useEditorStore.getState().bricks[0].rotation[1]).toBe(0);
   });
 
+  it('moves the selected brick one grid step and keeps the move undoable', () => {
+    const id = useEditorStore.getState().addBrick('cube-1', [5, 5, 5]);
+    expect(id).not.toBeNull();
+
+    expect(useEditorStore.getState().moveSelectedByGridStep([1, 0])).toBe(true);
+    expect(useEditorStore.getState().bricks[0].position).toEqual([15, 5, 5]);
+
+    useEditorStore.getState().undo();
+    expect(useEditorStore.getState().bricks[0].position).toEqual([5, 5, 5]);
+  });
+
   it('changes only the selected brick color and supports undo and redo', () => {
     const firstId = useEditorStore.getState().addBrick('cube-1');
     const secondId = useEditorStore.getState().addBrick('block-1x2');

@@ -7,6 +7,7 @@ import { BrickObject } from './BrickObject';
 import { CameraRig, type CameraView } from './CameraRig';
 import { DragInteraction } from './DragInteraction';
 import { GravityDropPreview } from './GravityDropPreview';
+import { KeyboardMovement } from './KeyboardMovement';
 import { PrintBed } from './PrintBed';
 
 function SceneContents({ view, resetKey }: { view: CameraView; resetKey: number }) {
@@ -86,6 +87,7 @@ function SceneContents({ view, resetKey }: { view: CameraView; resetKey: number 
         <BrickObject brick={drag.preview} opacity={0.68} selected ghost />
       ) : null}
       <DragInteraction />
+      <KeyboardMovement />
       <CameraRig view={view} resetKey={resetKey} dragging={Boolean(drag)} />
     </>
   );
