@@ -66,6 +66,42 @@ button:focus-visible { outline: 3px solid #ffd84d; outline-offset: 2px; }
 .top-actions .primary { min-width: 112px; color: #342d78; background: #ffd84d; border-color: #ffd84d; box-shadow: 0 3px 0 #cba315; font-weight: 850; }
 .top-actions .primary:hover { background: #ffe36d; }
 .toolbar-divider { width: 1px; height: 29px; margin: 0 3px; background: rgba(255,255,255,.25); }
+.print-action { position: relative; }
+.print-chevron { transition: transform .16s ease; }
+.print-chevron.is-open { transform: rotate(180deg); }
+.print-scale-menu {
+  position: absolute;
+  z-index: 40;
+  top: calc(100% + 10px);
+  right: 0;
+  width: 218px;
+  padding: 8px;
+  color: #37324b;
+  background: #fff;
+  border: 1px solid #dddfee;
+  border-radius: 14px;
+  box-shadow: 0 14px 38px rgba(37, 31, 82, .24);
+  animation: toast-in .16s ease-out;
+}
+.print-scale-title { padding: 5px 8px 8px; color: #777286; font-size: .76rem; font-weight: 750; }
+.top-actions .print-scale-menu button {
+  width: 100%;
+  min-height: 46px;
+  display: grid;
+  grid-template-columns: 53px 1fr 18px;
+  gap: 7px;
+  padding: 6px 9px;
+  color: #3e3952;
+  background: transparent;
+  border: 0;
+  border-radius: 9px;
+  box-shadow: none;
+  text-align: left;
+}
+.top-actions .print-scale-menu button:hover { color: #4438b3; background: #f0edff; transform: none; }
+.print-scale-menu strong { font-size: .97rem; font-weight: 900; }
+.print-scale-menu span { color: #858094; font-size: .75rem; font-weight: 650; }
+.print-scale-menu svg { color: #7165d6; }
 
 .workspace {
   min-height: 0;
@@ -250,6 +286,7 @@ button:focus-visible { outline: 3px solid #ffd84d; outline-offset: 2px; }
   .workspace { grid-template-columns: 240px minmax(0, 1fr); }
   .top-actions button { min-width: 50px; min-height: 48px; flex-direction: column; gap: 1px; padding: 3px 6px; }
   .top-actions .primary { min-width: 58px; }
+  .top-actions .print-scale-menu button { min-width: 0; min-height: 46px; flex-direction: row; }
   .top-actions .action-label { display: inline; max-width: 58px; overflow: hidden; white-space: nowrap; font-size: .66rem; line-height: 1; }
   .brand strong { font-size: 1.02rem; }
   .warning-stack { top: 66px; }
@@ -275,6 +312,8 @@ button:focus-visible { outline: 3px solid #ffd84d; outline-offset: 2px; }
   .top-actions, .action-group { gap: 2px; }
   .top-actions button { width: 44px; min-width: 44px; min-height: 50px; flex-direction: column; gap: 1px; padding: 2px; border-radius: 9px; }
   .top-actions .primary { min-width: 49px; }
+  .print-chevron { display: none; }
+  .print-scale-menu { right: -2px; width: 204px; }
   .top-actions .action-label { display: inline; max-width: 48px; overflow: hidden; white-space: nowrap; font-size: .62rem; line-height: 1; }
   .toolbar-divider { display: none; }
   .workspace { grid-template-rows: 132px minmax(0, 1fr); }

@@ -169,10 +169,15 @@ async function buildUnionGeometry(bricks: BrickInstance[]): Promise<BufferGeomet
   }
 }
 
-export async function buildBinaryStl(bricks: BrickInstance[]): Promise<ArrayBuffer> {
+export async function buildBinaryStl(
+  bricks: BrickInstance[],
+  scale = 1,
+): Promise<ArrayBuffer> {
   if (!bricks.length) throw new Error('场景里还没有积木');
+  if (!Number.isFinite(scale) || scale <= 0) throw new Error('打印比例必须大于 0');
 
   const geometry = await buildUnionGeometry(bricks);
+  geometry.scale(scale, scale, scale);
   const material = new MeshStandardMaterial();
   const printableMesh = new Mesh(geometry, material);
   printableMesh.name = 'Digital Bricks unified printable mesh';
@@ -192,8 +197,9 @@ export async function buildBinaryStl(bricks: BrickInstance[]): Promise<ArrayBuff
 export async function downloadStl(
   bricks: BrickInstance[],
   filename = '我的数字积木.stl',
+  scale = 1,
 ): Promise<void> {
-  const data = await buildBinaryStl(bricks);
+  const data = await buildBinaryStl(bricks, scale);
   const blob = new Blob([data], { type: 'model/stl' });
   const url = URL.createObjectURL(blob);
   const anchor = document.createElement('a');

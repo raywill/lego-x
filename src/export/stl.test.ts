@@ -110,6 +110,21 @@ describe('STL export', () => {
     expect(Math.max(...xCoordinates)).toBeCloseTo(15, 5);
   });
 
+  it.each([1, 0.75, 0.5, 0.25])('exports the complete model at %sx scale', async (scale) => {
+    const triangles = parseBinaryStl(await buildBinaryStl([cube('scaled', 0)], scale));
+    const xCoordinates = triangles.flatMap(({ a, b, c }) => [a[0], b[0], c[0]]);
+    const yCoordinates = triangles.flatMap(({ a, b, c }) => [a[1], b[1], c[1]]);
+
+    expect(Math.min(...xCoordinates)).toBeCloseTo(-5 * scale, 5);
+    expect(Math.max(...xCoordinates)).toBeCloseTo(5 * scale, 5);
+    expect(Math.min(...yCoordinates)).toBeCloseTo(0, 5);
+    expect(Math.max(...yCoordinates)).toBeCloseTo(10 * scale, 5);
+  });
+
+  it('rejects an invalid export scale', async () => {
+    await expect(buildBinaryStl([cube('invalid-scale', 0)], 0)).rejects.toThrow('打印比例必须大于 0');
+  });
+
   it.each(BRICK_DEFINITIONS)(
     'converts $id procedural geometry to a printable solid',
     async (definition) => {
