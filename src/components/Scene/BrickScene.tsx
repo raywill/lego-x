@@ -34,7 +34,12 @@ function SceneContents({ view, resetKey }: { view: CameraView; resetKey: number 
     );
   }, [selectBrick, startBrickDrag]);
 
-  const hiddenBrickId = drag?.source === 'brick' ? drag.brickId : null;
+  // Keep the real brick under the pointer until movement crosses the drag
+  // threshold. Removing it on pointer-down turns a plain click into a canvas
+  // miss, which immediately clears the selection again.
+  const movingExistingBrick = drag?.source === 'brick' && drag.hasMoved;
+  const hiddenBrickId = movingExistingBrick ? drag.brickId : null;
+  const showDragPreview = drag?.source === 'palette' || movingExistingBrick;
   const isSnapping = Boolean(drag?.candidate?.committable);
   const landed = drag?.drop
     ? {
@@ -70,14 +75,14 @@ function SceneContents({ view, resetKey }: { view: CameraView; resetKey: number 
           key={brick.id}
         />
       ))}
-      {drag?.overScene && landed ? (
+      {showDragPreview && drag?.overScene && landed ? (
         <GravityDropPreview
           held={drag.preview}
           landed={landed}
           contactFootprint={{ ...drag.drop!.contact, y: drag.drop!.supportY }}
           isSnapping={isSnapping}
         />
-      ) : drag?.overScene ? (
+      ) : showDragPreview && drag?.overScene ? (
         <BrickObject brick={drag.preview} opacity={0.68} selected ghost />
       ) : null}
       <DragInteraction />

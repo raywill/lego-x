@@ -47,6 +47,9 @@ export function SelectionToolbar() {
   if (!brick) return null;
   const definition = getBrickDefinition(brick.definitionId);
   const currentColor = brick.color ?? definition?.color ?? '#8b92a3';
+  const customColorValue = /^#[0-9a-f]{6}$/i.test(currentColor) ? currentColor : '#8b92a3';
+  const hasCustomColor = brick.color !== undefined
+    && !COLOR_CHOICES.some((choice) => choice.value === brick.color);
 
   return (
     <div className="selection-toolbar" role="toolbar" aria-label={`${definition?.name ?? '积木'}的操作`}>
@@ -105,6 +108,17 @@ export function SelectionToolbar() {
                   </button>
                 );
               })}
+              <label className={`more-color-option ${hasCustomColor ? 'is-selected' : ''}`}>
+                <span className="more-color-wheel" aria-hidden="true" />
+                <span className="more-color-copy"><strong>更多</strong><small>任意颜色</small></span>
+                <input
+                  type="color"
+                  value={customColorValue}
+                  aria-label="选择更多颜色"
+                  onChange={(event) => setSelectedColor(event.currentTarget.value)}
+                />
+                {hasCustomColor && <Check className="more-color-check" size={14} aria-hidden="true" />}
+              </label>
             </div>
           </div>
         )}

@@ -40,15 +40,15 @@ describe('editor store', () => {
     if (!firstId || !secondId) throw new Error('Expected test bricks to be created.');
 
     useEditorStore.getState().selectBrick(firstId);
-    useEditorStore.getState().setSelectedColor('#43a7df');
-    expect(useEditorStore.getState().bricks.find((brick) => brick.id === firstId)?.color).toBe('#43a7df');
+    useEditorStore.getState().setSelectedColor('#123abc');
+    expect(useEditorStore.getState().bricks.find((brick) => brick.id === firstId)?.color).toBe('#123abc');
     expect(useEditorStore.getState().bricks.find((brick) => brick.id === secondId)?.color).toBeUndefined();
 
     useEditorStore.getState().undo();
     expect(useEditorStore.getState().bricks.find((brick) => brick.id === firstId)?.color).toBeUndefined();
 
     useEditorStore.getState().redo();
-    expect(useEditorStore.getState().bricks.find((brick) => brick.id === firstId)?.color).toBe('#43a7df');
+    expect(useEditorStore.getState().bricks.find((brick) => brick.id === firstId)?.color).toBe('#123abc');
   });
 
   it('adds and removes a connection without deleting neighboring bricks', () => {

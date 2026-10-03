@@ -292,6 +292,31 @@ button:focus-visible { outline: 3px solid #ffd84d; outline-offset: 2px; }
 .color-dot { width: 20px; height: 20px; border: 2px solid rgba(43,39,62,.25); border-radius: 5px; box-shadow: inset 0 0 0 1px rgba(255,255,255,.4); }
 .color-dot.original-color { position: relative; }
 .color-dot.original-color::after { content: ''; position: absolute; inset: 3px; border: 1px solid rgba(255,255,255,.75); border-radius: 2px; }
+.more-color-option {
+  position: relative;
+  grid-column: 1 / -1;
+  min-height: 44px;
+  display: grid;
+  grid-template-columns: 28px 1fr 34px;
+  align-items: center;
+  gap: 8px;
+  margin-top: 3px;
+  padding: 5px 7px;
+  color: #4a465e;
+  background: #f7f6fc;
+  border: 1px solid #e2dfef;
+  border-radius: 10px;
+  cursor: pointer;
+}
+.more-color-option:hover, .more-color-option.is-selected { color: #4e40c6; background: #f0edff; border-color: #d7d0ff; }
+.more-color-wheel { width: 24px; height: 24px; border: 2px solid rgba(43,39,62,.18); border-radius: 50%; background: conic-gradient(#f15b64, #f4c542, #58c96f, #43a7df, #8871e8, #e76db6, #f15b64); }
+.more-color-copy { display: grid; gap: 1px; }
+.more-color-copy strong { font-size: .78rem; font-weight: 850; }
+.more-color-copy small { color: #8a8598; font-size: .65rem; font-weight: 650; }
+.more-color-option input[type='color'] { width: 32px; height: 30px; padding: 2px; background: #fff; border: 1px solid #cbc7d9; border-radius: 7px; cursor: pointer; }
+.more-color-option input[type='color']::-webkit-color-swatch-wrapper { padding: 1px; }
+.more-color-option input[type='color']::-webkit-color-swatch { border: 0; border-radius: 4px; }
+.more-color-check { position: absolute; right: 45px; color: #5b4ed0; pointer-events: none; }
 
 .bed-label, .scene-count { position: absolute; z-index: 3; bottom: 15px; display: flex; align-items: center; color: #656175; background: rgba(255,255,255,.88); border: 1px solid #dfe3f0; border-radius: 11px; box-shadow: 0 5px 15px rgba(51,57,91,.08); backdrop-filter: blur(7px); font-size: .73rem; font-weight: 700; pointer-events: none; }
 .bed-label { left: 15px; gap: 8px; padding: 9px 11px; }.bed-dot { width: 8px; height: 8px; background: #55c894; border-radius: 50%; box-shadow: 0 0 0 4px rgba(85,200,148,.17); }
