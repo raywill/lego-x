@@ -116,4 +116,16 @@ describe('brick catalog', () => {
       materials.forEach((material) => material.dispose());
     });
   });
+
+  it('keeps both broad faces of a thin plate attachable after it is upright', () => {
+    const definition = getBrickDefinition('plate-1x2');
+    if (!definition) throw new Error('Expected thin plate definition.');
+    const faceMagnets = definition.connectors.filter(({ id, type }) => (
+      type === 'magnet'
+      && (id.startsWith('plate-top-magnet') || id.startsWith('plate-bottom-magnet'))
+    ));
+
+    expect(faceMagnets).toHaveLength(4);
+    expect(faceMagnets.every(({ position }) => Math.abs(position[1]) === 2.5)).toBe(true);
+  });
 });

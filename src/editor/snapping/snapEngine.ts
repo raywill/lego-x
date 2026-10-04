@@ -73,6 +73,12 @@ export interface FindBestSnapInput {
    * snap thresholds while the final transform remains exact world geometry.
    */
   distanceResolver?: (source: WorldConnector, target: WorldConnector) => number;
+  /**
+   * Keep the child's chosen brick orientation exactly as-is. Candidates that
+   * would require an automatic turn are ignored and snapping only translates
+   * the brick into contact.
+   */
+  preserveDraggedRotation?: boolean;
   /** Optional editor constraint, such as requiring the final body to be on a placement grid. */
   transformValidator?: (
     transform: SnapTransform,
@@ -173,6 +179,7 @@ export function findBestSnap({
   occupiedConnectorKeys = new Set<string>(),
   config: configOverrides,
   distanceResolver,
+  preserveDraggedRotation = false,
   transformValidator,
 }: FindBestSnapInput): SnapCandidate | null {
   const config: SnapEngineConfig = {
@@ -225,12 +232,19 @@ export function findBestSnap({
         continue;
       }
 
-      const transform = transformForDesiredConnector(
-        source.connector,
-        targetPosition,
-        bestOrientation.desiredSourceQuaternion,
-        config.epsilon,
-      );
+      if (
+        preserveDraggedRotation
+        && bestOrientation.angularCorrectionRad > config.epsilon
+      ) continue;
+
+      const transform = preserveDraggedRotation
+        ? translationOnlyTransform(dragged, sourcePosition, targetPosition, config.epsilon)
+        : transformForDesiredConnector(
+            source.connector,
+            targetPosition,
+            bestOrientation.desiredSourceQuaternion,
+            config.epsilon,
+          );
       if (transformValidator && !transformValidator(transform, target, source)) continue;
       const score =
         distanceMm +
@@ -273,6 +287,20 @@ export function findBestSnap({
       targets,
       occupiedConnectorKeys,
     ),
+  };
+}
+
+function translationOnlyTransform(
+  dragged: BrickInstance,
+  sourcePosition: Vector3,
+  targetPosition: Vector3,
+  epsilon: number,
+): SnapTransform {
+  const position = vectorFromTuple(dragged.position)
+    .add(targetPosition.clone().sub(sourcePosition));
+  return {
+    position: vectorToTuple(position, epsilon),
+    rotation: [...dragged.rotation],
   };
 }
 

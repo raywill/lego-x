@@ -277,6 +277,36 @@ export function createSideMagnetConnectors(
   ];
 }
 
+/**
+ * Logical-only broad-face contacts for thin plates. Once a 5 mm plate is
+ * upright, its former top/bottom faces become walls; magnets keep those walls
+ * attachable without rotating the approaching brick.
+ */
+function createPlateFaceMagnets(
+  size: Vec3Tuple,
+  columnsX: number,
+  columnsZ: number,
+): ConnectorDefinition[] {
+  return [
+    ...createConnectorGrid({
+      face: 'top',
+      type: 'magnet',
+      size,
+      columns: columnsX,
+      rows: columnsZ,
+      idPrefix: 'plate-top-magnet',
+    }),
+    ...createConnectorGrid({
+      face: 'bottom',
+      type: 'magnet',
+      size,
+      columns: columnsX,
+      rows: columnsZ,
+      idPrefix: 'plate-bottom-magnet',
+    }),
+  ];
+}
+
 export function createAxisPair(
   size: Vec3Tuple,
   axis: Axis,
@@ -679,6 +709,7 @@ export const BRICK_DEFINITIONS: BrickDefinition[] = [
     connectors: [
       ...createTopBottomGrid(plate1x2Size, 2, 1),
       ...createSideMagnetConnectors(plate1x2Size, 2, 1),
+      ...createPlateFaceMagnets(plate1x2Size, 2, 1),
     ],
   },
   {
@@ -692,6 +723,7 @@ export const BRICK_DEFINITIONS: BrickDefinition[] = [
     connectors: [
       ...createTopBottomGrid(plate3x3Size, 3, 3),
       ...createSideMagnetConnectors(plate3x3Size, 3, 3),
+      ...createPlateFaceMagnets(plate3x3Size, 3, 3),
     ],
   },
   {
@@ -705,6 +737,7 @@ export const BRICK_DEFINITIONS: BrickDefinition[] = [
     connectors: [
       ...createTopBottomGrid(plate1x6Size, 6, 1),
       ...createSideMagnetConnectors(plate1x6Size, 6, 1),
+      ...createPlateFaceMagnets(plate1x6Size, 6, 1),
     ],
   },
   {

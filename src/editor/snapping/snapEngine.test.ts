@@ -180,6 +180,100 @@ describe('findBestSnap', () => {
     });
   });
 
+  it('rejects a snap that would rotate the dragged brick when orientation is preserved', () => {
+    const source = connector({
+      id: 'bottom',
+      type: 'socket',
+      compatibleWith: ['stud'],
+      polarity: 'female',
+      rotation: [0, 0, HALF_TURN],
+    });
+    const draggedDefinition = definition('dragged-no-turn', [source]);
+    const targetDefinition = definition('target-sideways', [
+      connector({ id: 'side-stud', rotation: [0, 0, Math.PI / 2] }),
+    ]);
+    const targets = getWorldConnectors(
+      instance('target', targetDefinition.id),
+      targetDefinition,
+    );
+
+    expect(findBestSnap({
+      dragged: instance('moving', draggedDefinition.id),
+      draggedDefinition,
+      targets,
+    })).not.toBeNull();
+    expect(findBestSnap({
+      dragged: instance('moving', draggedDefinition.id),
+      draggedDefinition,
+      targets,
+      preserveDraggedRotation: true,
+    })).toBeNull();
+  });
+
+  it('translation-only snapping attaches a 1x1 cube to an upright half-thickness plate', () => {
+    const cube = getBrickDefinition('cube-1');
+    const plate = getBrickDefinition('plate-1x2');
+    if (!cube || !plate) throw new Error('Expected cube and thin plate definitions.');
+    const fixedPlate = instance(
+      'upright-plate',
+      plate.id,
+      [2.5, 10, 5],
+      [0, 0, Math.PI / 2],
+    );
+    const movingCube = instance('moving-cube', cube.id, [-5.3, 5, 5]);
+
+    const candidate = findBestSnap({
+      dragged: movingCube,
+      draggedDefinition: cube,
+      targets: getWorldConnectors(fixedPlate, plate),
+      preserveDraggedRotation: true,
+    });
+
+    expect(candidate?.committable).toBe(true);
+    expect(candidate?.source.connector.type).toBe('magnet');
+    expect(candidate?.target.connector.type).toBe('magnet');
+    expect(candidate?.transform.rotation).toEqual(movingCube.rotation);
+    expect(candidate?.angularCorrectionRad).toBeCloseTo(0);
+    expect(candidate?.transform.position[0]).toBeCloseTo(-5);
+    expect(candidate?.transform.position.slice(1)).toEqual([5, 5]);
+    const snapped: BrickInstance = {
+      ...movingCube,
+      position: [...candidate!.transform.position],
+      rotation: [...candidate!.transform.rotation],
+    };
+    expect(bricksOverlap(fixedPlate, snapped)).toBe(false);
+    expect(isConnectionValid(candidate!.connection, [fixedPlate, snapped])).toBe(true);
+  });
+
+  it('side snapping ignores the height difference between a cube and a flat thin plate', () => {
+    const cube = getBrickDefinition('cube-1');
+    const plate = getBrickDefinition('plate-1x2');
+    if (!cube || !plate) throw new Error('Expected cube and thin plate definitions.');
+    const fixedPlate = instance('flat-plate', plate.id, [0, 2.5, 5]);
+    const movingCube = instance('moving-cube', cube.id, [15.3, 5, 5]);
+
+    const candidate = findBestSnap({
+      dragged: movingCube,
+      draggedDefinition: cube,
+      targets: getWorldConnectors(fixedPlate, plate),
+      preserveDraggedRotation: true,
+    });
+
+    expect(candidate?.committable).toBe(true);
+    expect(candidate?.source.connector.type).toBe('magnet');
+    expect(candidate?.target.connector.type).toBe('magnet');
+    expect(candidate?.transform.rotation).toEqual(movingCube.rotation);
+    expect(candidate?.transform.position[0]).toBeCloseTo(15);
+    expect(candidate?.transform.position.slice(1)).toEqual([5, 5]);
+    const snapped: BrickInstance = {
+      ...movingCube,
+      position: [...candidate!.transform.position],
+      rotation: [...candidate!.transform.rotation],
+    };
+    expect(bricksOverlap(fixedPlate, snapped)).toBe(false);
+    expect(isConnectionValid(candidate!.connection, [fixedPlate, snapped])).toBe(true);
+  });
+
   it('lets the editor reject an otherwise valid off-grid transform', () => {
     const source = connector({
       id: 'bottom',

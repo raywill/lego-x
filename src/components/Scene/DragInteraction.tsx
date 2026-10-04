@@ -189,6 +189,7 @@ export function DragInteraction() {
         draggedDefinition: definition,
         targets,
         occupiedConnectorKeys: occupied,
+        preserveDraggedRotation: true,
         distanceResolver: (source, target) => {
           const sourceScreen = new Vector3(...source.position).project(camera);
           const targetScreen = new Vector3(...target.position).project(camera);
