@@ -506,6 +506,7 @@ const block1x2Size: Vec3Tuple = [2 * U, U, U];
 const block2x2Size: Vec3Tuple = [2 * U, U, 2 * U];
 const block2x4Size: Vec3Tuple = [4 * U, U, 2 * U];
 const beamSize: Vec3Tuple = [6 * U, U, U];
+const plate1x1Size: Vec3Tuple = [U, PLATE, U];
 const plate1x2Size: Vec3Tuple = [2 * U, PLATE, U];
 const plate3x3Size: Vec3Tuple = [3 * U, PLATE, 3 * U];
 const plate1x6Size: Vec3Tuple = [6 * U, PLATE, U];
@@ -696,6 +697,20 @@ export const BRICK_DEFINITIONS: BrickDefinition[] = [
       ...createTopBottomGrid(beamSize, 6, 1),
       ...createSideMagnetConnectors(beamSize, 6, 1),
       ...beamSideHoles,
+    ],
+  },
+  {
+    id: 'plate-1x1',
+    name: '一乘一薄板',
+    shortName: '小薄板',
+    category: 'blocks',
+    size: plate1x1Size,
+    color: '#5479e8',
+    geometry: { kind: 'box', size: plate1x1Size },
+    connectors: [
+      ...createTopBottomGrid(plate1x1Size, 1, 1),
+      ...createSideMagnetConnectors(plate1x1Size, 1, 1),
+      ...createPlateFaceMagnets(plate1x1Size, 1, 1),
     ],
   },
   {

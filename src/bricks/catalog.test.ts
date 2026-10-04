@@ -4,9 +4,9 @@ import { BRICK_DEFINITIONS, getBrickDefinition } from './catalog';
 import { createBrickGroup, getBrickGroundY } from './geometry';
 
 describe('brick catalog', () => {
-  it('contains 33 unique, connector-driven construction pieces', () => {
-    expect(BRICK_DEFINITIONS).toHaveLength(33);
-    expect(new Set(BRICK_DEFINITIONS.map((definition) => definition.id)).size).toBe(33);
+  it('contains 34 unique, connector-driven construction pieces', () => {
+    expect(BRICK_DEFINITIONS).toHaveLength(34);
+    expect(new Set(BRICK_DEFINITIONS.map((definition) => definition.id)).size).toBe(34);
     expect(BRICK_DEFINITIONS.every((definition) => definition.connectors.length > 0)).toBe(true);
   });
 
@@ -127,5 +127,16 @@ describe('brick catalog', () => {
 
     expect(faceMagnets).toHaveLength(4);
     expect(faceMagnets.every(({ position }) => Math.abs(position[1]) === 2.5)).toBe(true);
+  });
+
+  it('provides a one-by-one half-height plate with generic face connections', () => {
+    const definition = getBrickDefinition('plate-1x1');
+    if (!definition) throw new Error('Expected one-by-one thin plate definition.');
+
+    expect(definition.size).toEqual([10, 5, 10]);
+    expect(definition.geometry).toEqual({ kind: 'box', size: [10, 5, 10] });
+    expect(definition.connectors.filter(({ type }) => type === 'stud')).toHaveLength(1);
+    expect(definition.connectors.filter(({ type }) => type === 'socket')).toHaveLength(1);
+    expect(definition.connectors.filter(({ type }) => type === 'magnet')).toHaveLength(6);
   });
 });
