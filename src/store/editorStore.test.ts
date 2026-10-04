@@ -15,6 +15,11 @@ const resetStore = () => {
     bricks: [],
     connections: [],
     selectedId: null,
+    selectedIds: [],
+    multiSelectMode: false,
+    selectionMarquee: null,
+    groupCopy: null,
+    groupMove: null,
     past: [],
     future: [],
     drag: null,
@@ -155,6 +160,109 @@ describe('editor store', () => {
     expect(source.id).toBe(sourceId);
     expect(copy.id).toBe(copyId);
     expect(bricksOverlap(source, copy)).toBe(false);
+  });
+
+  it('selects an entire connected component without crossing into another assembly', () => {
+    const first = useEditorStore.getState().addBrick('cube-1', [5, 5, 5]);
+    const second = useEditorStore.getState().addBrick('cube-1', [5, 15, 5]);
+    const separate = useEditorStore.getState().addBrick('cube-1', [25, 5, 5]);
+    if (!first || !second || !separate) throw new Error('Expected test bricks.');
+    const cubeDefinition = BRICK_DEFINITIONS.find(({ id }) => id === 'cube-1');
+    const stud = cubeDefinition?.connectors.find(({ type }) => type === 'stud');
+    const socket = cubeDefinition?.connectors.find(({ type }) => type === 'socket');
+    if (!stud || !socket) throw new Error('Expected cube connectors.');
+    useEditorStore.setState({
+      connections: [createConnection(first, stud.id, second, socket.id)],
+      selectedId: first,
+      selectedIds: [first],
+    });
+
+    useEditorStore.getState().selectConnectedBricks();
+
+    expect(new Set(useEditorStore.getState().selectedIds)).toEqual(new Set([first, second]));
+    expect(useEditorStore.getState().selectedIds).not.toContain(separate);
+    expect(useEditorStore.getState().multiSelectMode).toBe(true);
+  });
+
+  it('copies a selection as one undoable operation and remaps internal connections', () => {
+    const first = useEditorStore.getState().addBrick('cube-1', [5, 5, 5]);
+    const second = useEditorStore.getState().addBrick('cube-1', [5, 15, 5]);
+    if (!first || !second) throw new Error('Expected test bricks.');
+    const cubeDefinition = BRICK_DEFINITIONS.find(({ id }) => id === 'cube-1');
+    const stud = cubeDefinition?.connectors.find(({ type }) => type === 'stud');
+    const socket = cubeDefinition?.connectors.find(({ type }) => type === 'socket');
+    if (!stud || !socket) throw new Error('Expected cube connectors.');
+    useEditorStore.setState({
+      connections: [createConnection(first, stud.id, second, socket.id)],
+      selectedId: second,
+      selectedIds: [first, second],
+      multiSelectMode: true,
+    });
+    const historyBefore = useEditorStore.getState().past.length;
+
+    expect(useEditorStore.getState().startGroupCopy()).toBe(true);
+    useEditorStore.getState().updateGroupPlacement([45, 5]);
+    useEditorStore.getState().commitGroupPlacement();
+
+    const state = useEditorStore.getState();
+    expect(state.bricks).toHaveLength(4);
+    expect(state.connections).toHaveLength(2);
+    expect(state.selectedIds).toHaveLength(2);
+    expect(state.connections[1].brickA).not.toBe(first);
+    expect(state.connections[1].brickB).not.toBe(second);
+    expect(state.past).toHaveLength(historyBefore + 1);
+
+    useEditorStore.getState().undo();
+    expect(useEditorStore.getState().bricks).toHaveLength(2);
+    expect(useEditorStore.getState().connections).toHaveLength(1);
+  });
+
+  it('moves a multi-selection together with the keyboard and preserves internal spacing', () => {
+    const first = useEditorStore.getState().addBrick('cube-1', [5, 5, 5]);
+    const second = useEditorStore.getState().addBrick('cube-1', [15, 5, 5]);
+    if (!first || !second) throw new Error('Expected test bricks.');
+    useEditorStore.setState({
+      selectedId: second,
+      selectedIds: [first, second],
+      multiSelectMode: true,
+    });
+
+    expect(useEditorStore.getState().moveSelectionByGridStep([0, 1])).toBe(true);
+    const moved = useEditorStore.getState().bricks;
+    expect(moved.map(({ position }) => position)).toEqual([[5, 5, 15], [15, 5, 15]]);
+    expect(moved[1].position[0] - moved[0].position[0]).toBe(10);
+
+    useEditorStore.getState().undo();
+    expect(useEditorStore.getState().bricks.map(({ position }) => position))
+      .toEqual([[5, 5, 5], [15, 5, 5]]);
+  });
+
+  it('moves a selected group by preview and keeps internal connections only', () => {
+    const first = useEditorStore.getState().addBrick('cube-1', [5, 5, 5]);
+    const second = useEditorStore.getState().addBrick('cube-1', [5, 15, 5]);
+    const neighbor = useEditorStore.getState().addBrick('cube-1', [15, 5, 5]);
+    if (!first || !second || !neighbor) throw new Error('Expected test bricks.');
+    const cubeDefinition = BRICK_DEFINITIONS.find(({ id }) => id === 'cube-1');
+    const stud = cubeDefinition?.connectors.find(({ type }) => type === 'stud');
+    const socket = cubeDefinition?.connectors.find(({ type }) => type === 'socket');
+    const magnet = cubeDefinition?.connectors.find(({ type }) => type === 'magnet');
+    if (!stud || !socket || !magnet) throw new Error('Expected cube connectors.');
+    const internal = createConnection(first, stud.id, second, socket.id);
+    const external = createConnection(first, magnet.id, neighbor, magnet.id);
+    useEditorStore.setState({
+      connections: [internal, external],
+      selectedId: second,
+      selectedIds: [first, second],
+      multiSelectMode: true,
+    });
+
+    expect(useEditorStore.getState().startGroupMove()).toBe(true);
+    useEditorStore.getState().updateGroupPlacement([45, 5]);
+    useEditorStore.getState().commitGroupPlacement();
+
+    expect(useEditorStore.getState().connections).toEqual([internal]);
+    expect(useEditorStore.getState().bricks.find(({ id }) => id === first)?.position[0]).toBe(45);
+    expect(useEditorStore.getState().bricks.find(({ id }) => id === second)?.position[0]).toBe(45);
   });
 
   it('rejects a dragged brick released inside another brick', () => {

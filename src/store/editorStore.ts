@@ -29,12 +29,19 @@ import {
 import { getBrickBodyBounds, snapBrickToGrid } from '../editor/grid/gridEngine';
 import {
   computeKeyboardMove,
+  getKeyboardMoveStep,
   type GridDirection,
 } from '../editor/movement/keyboardMoveEngine';
 import {
   rotateBrickByWorldQuarterTurn,
   type QuarterTurnDirection,
 } from '../editor/rotation/orientationEngine';
+import {
+  collectConnectedBrickIds,
+  duplicateBrickGroup,
+  getGroupAnchor,
+  placeBrickGroup,
+} from '../editor/selection/groupSelection';
 import { getWorldConnectors, type SnapCandidate } from '../editor/snapping/snapEngine';
 import type {
   BrickInstance,
@@ -66,10 +73,32 @@ export interface DragState {
 
 export type EditorDragState = DragState;
 
+export interface SelectionMarquee {
+  left: number;
+  top: number;
+  width: number;
+  height: number;
+}
+
+export interface GroupCopyState {
+  bricks: BrickInstance[];
+  connections: Connection[];
+}
+
+export interface GroupMoveState {
+  bricks: BrickInstance[];
+  sourceIds: string[];
+}
+
 export interface EditorStore {
   bricks: BrickInstance[];
   connections: Connection[];
   selectedId: string | null;
+  selectedIds: string[];
+  multiSelectMode: boolean;
+  selectionMarquee: SelectionMarquee | null;
+  groupCopy: GroupCopyState | null;
+  groupMove: GroupMoveState | null;
   past: ProjectSnapshot[];
   future: ProjectSnapshot[];
   drag: EditorDragState | null;
@@ -83,6 +112,17 @@ export interface EditorStore {
     color?: string,
   ) => string | null;
   selectBrick: (id: string | null) => void;
+  setMultiSelectMode: (enabled: boolean) => void;
+  toggleBrickSelection: (id: string) => void;
+  setSelectedBricks: (ids: readonly string[]) => void;
+  selectConnectedBricks: () => void;
+  setSelectionMarquee: (marquee: SelectionMarquee | null) => void;
+  startGroupCopy: () => boolean;
+  startGroupMove: () => boolean;
+  updateGroupPlacement: (targetXZ: readonly [number, number]) => void;
+  commitGroupPlacement: () => void;
+  cancelGroupPlacement: () => void;
+  moveSelectionByGridStep: (direction: GridDirection) => boolean;
   rotateSelected: (direction: RotationDirection) => void;
   flipSelected: (direction: FlipDirection) => void;
   moveSelectedByGridStep: (direction: GridDirection) => boolean;
@@ -262,6 +302,11 @@ export const useEditorStore = create<EditorStore>((set, get) => ({
   bricks: [],
   connections: [],
   selectedId: null,
+  selectedIds: [],
+  multiSelectMode: false,
+  selectionMarquee: null,
+  groupCopy: null,
+  groupMove: null,
   past: [],
   future: [],
   drag: null,
@@ -287,14 +332,234 @@ export const useEditorStore = create<EditorStore>((set, get) => ({
       const placedBrick = findNearestFreeGridPlacement(brick, state.bricks);
       return withCommittedProject(state, [...state.bricks.map(cloneBrick), placedBrick], [
         ...state.connections.map((connection) => ({ ...connection })),
-      ], { selectedId: id });
+      ], { selectedId: id, selectedIds: [id], multiSelectMode: false });
     });
     return id;
   },
 
   selectBrick: (id) => {
     if (id !== null && !get().bricks.some((brick) => brick.id === id)) return;
-    set({ selectedId: id });
+    set({
+      selectedId: id,
+      selectedIds: id ? [id] : [],
+      multiSelectMode: false,
+      selectionMarquee: null,
+    });
+  },
+
+  setMultiSelectMode: (enabled) => {
+    set((state) => {
+      if (state.drag || state.groupCopy || state.groupMove) return state;
+      return {
+        multiSelectMode: enabled,
+        selectionMarquee: null,
+        selectedIds: enabled
+          ? state.selectedIds.length > 0
+            ? [...state.selectedIds]
+            : state.selectedId ? [state.selectedId] : []
+          : state.selectedId ? [state.selectedId] : [],
+      };
+    });
+  },
+
+  toggleBrickSelection: (id) => {
+    set((state) => {
+      if (!state.bricks.some((brick) => brick.id === id)) return state;
+      if (!state.multiSelectMode) {
+        return { selectedId: id, selectedIds: [id] };
+      }
+      const selected = new Set(state.selectedIds);
+      if (selected.has(id)) selected.delete(id); else selected.add(id);
+      const selectedIds = [...selected];
+      return {
+        selectedIds,
+        selectedId: selectedIds.at(-1) ?? null,
+      };
+    });
+  },
+
+  setSelectedBricks: (ids) => {
+    set((state) => {
+      const existing = new Set(state.bricks.map((brick) => brick.id));
+      const selectedIds = [...new Set(ids)].filter((id) => existing.has(id));
+      return {
+        selectedIds,
+        selectedId: selectedIds.at(-1) ?? null,
+      };
+    });
+  },
+
+  selectConnectedBricks: () => {
+    set((state) => {
+      const seeds = state.selectedIds.length > 0
+        ? state.selectedIds
+        : state.selectedId ? [state.selectedId] : [];
+      if (seeds.length === 0) return state;
+      const selectedIds = collectConnectedBrickIds(seeds, state.connections)
+        .filter((id) => state.bricks.some((brick) => brick.id === id));
+      return {
+        selectedIds,
+        selectedId: selectedIds.at(-1) ?? null,
+        multiSelectMode: true,
+        toast: selectedIds.length > seeds.length
+          ? `已选中 ${selectedIds.length} 块相连积木`
+          : '没有找到更多相连积木',
+      };
+    });
+  },
+
+  setSelectionMarquee: (selectionMarquee) => set({ selectionMarquee }),
+
+  startGroupCopy: () => {
+    const state = get();
+    const selectedIds = state.selectedIds.length > 0
+      ? state.selectedIds
+      : state.selectedId ? [state.selectedId] : [];
+    if (selectedIds.length === 0 || state.drag || state.groupCopy || state.groupMove) return false;
+    const duplicated = duplicateBrickGroup(
+      state.bricks,
+      state.connections,
+      selectedIds,
+      makeBrickId,
+    );
+    if (duplicated.bricks.length === 0) return false;
+    const anchor = getGroupAnchor(duplicated.bricks);
+    const copies = placeBrickGroup(
+      duplicated.bricks,
+      state.bricks,
+      [anchor[0] + BRICK_UNIT, anchor[2] + BRICK_UNIT],
+    );
+    set({
+      groupCopy: { bricks: copies, connections: duplicated.connections },
+      selectionMarquee: null,
+      toast: '移动整组副本，点击放下',
+    });
+    return true;
+  },
+
+  startGroupMove: () => {
+    const state = get();
+    const sourceIds = state.selectedIds.length > 0
+      ? state.selectedIds
+      : state.selectedId ? [state.selectedId] : [];
+    if (sourceIds.length === 0 || state.drag || state.groupCopy || state.groupMove) return false;
+    const selected = new Set(sourceIds);
+    const bricks = state.bricks.filter((brick) => selected.has(brick.id)).map(cloneBrick);
+    if (bricks.length === 0) return false;
+    set({
+      groupMove: { bricks, sourceIds: bricks.map((brick) => brick.id) },
+      selectionMarquee: null,
+      toast: '移动整组，点击放下',
+    });
+    return true;
+  },
+
+  updateGroupPlacement: (targetXZ) => {
+    set((state) => {
+      if (state.groupCopy) {
+        return {
+          groupCopy: {
+            ...state.groupCopy,
+            bricks: placeBrickGroup(state.groupCopy.bricks, state.bricks, targetXZ),
+          },
+        };
+      }
+      if (!state.groupMove) return state;
+      const movedIds = new Set(state.groupMove.sourceIds);
+      const obstacles = state.bricks.filter((brick) => !movedIds.has(brick.id));
+      return {
+        groupMove: {
+          ...state.groupMove,
+          bricks: placeBrickGroup(state.groupMove.bricks, obstacles, targetXZ),
+        },
+      };
+    });
+  },
+
+  commitGroupPlacement: () => {
+    set((current) => {
+      if (current.groupCopy) {
+        const copiedIds = current.groupCopy.bricks.map((brick) => brick.id);
+        return withCommittedProject(
+          current,
+          [...current.bricks.map(cloneBrick), ...current.groupCopy.bricks.map(cloneBrick)],
+          [
+            ...current.connections.map((connection) => ({ ...connection })),
+            ...current.groupCopy.connections.map((connection) => ({ ...connection })),
+          ],
+          {
+            selectedId: copiedIds.at(-1) ?? null,
+            selectedIds: copiedIds,
+            multiSelectMode: true,
+            groupCopy: null,
+            groupMove: null,
+            toast: `已复制 ${copiedIds.length} 块积木`,
+          },
+        );
+      }
+      if (!current.groupMove) return current;
+      const movedIds = new Set(current.groupMove.sourceIds);
+      const movedById = new Map(current.groupMove.bricks.map((brick) => [brick.id, brick]));
+      const changed = current.groupMove.bricks.some((brick) => {
+        const original = current.bricks.find((item) => item.id === brick.id);
+        return !original || !sameTuple(original.position, brick.position);
+      });
+      if (!changed) return { groupMove: null, toast: null };
+      const bricks = current.bricks.map((brick) => cloneBrick(movedById.get(brick.id) ?? brick));
+      const connections = current.connections.filter((connection) => {
+        const aMoved = movedIds.has(connection.brickA);
+        const bMoved = movedIds.has(connection.brickB);
+        return aMoved === bMoved;
+      }).map((connection) => ({ ...connection }));
+      const sourceIds = [...current.groupMove.sourceIds];
+      return withCommittedProject(current, bricks, connections, {
+        selectedId: sourceIds.at(-1) ?? null,
+        selectedIds: sourceIds,
+        multiSelectMode: true,
+        groupMove: null,
+        toast: `已移动 ${sourceIds.length} 块积木`,
+      });
+    });
+  },
+
+  cancelGroupPlacement: () => set({ groupCopy: null, groupMove: null, toast: null }),
+
+  moveSelectionByGridStep: (direction) => {
+    let moved = false;
+    set((state) => {
+      if (state.drag || state.groupCopy || state.groupMove || state.selectedIds.length < 2) {
+        return state;
+      }
+      const selectedIds = new Set(state.selectedIds);
+      const selected = state.bricks.filter((brick) => selectedIds.has(brick.id));
+      if (selected.length === 0) return state;
+      const obstacles = state.bricks.filter((brick) => !selectedIds.has(brick.id));
+      const anchor = getGroupAnchor(selected);
+      const step = Math.min(...selected.map(getKeyboardMoveStep));
+      const target: [number, number] = [
+        anchor[0] + direction[0] * step,
+        anchor[2] + direction[1] * step,
+      ];
+      const placed = placeBrickGroup(selected, obstacles, target);
+      const placedById = new Map(placed.map((brick) => [brick.id, brick]));
+      if (placed.every((brick) => {
+        const original = state.bricks.find((item) => item.id === brick.id);
+        return original && sameTuple(original.position, brick.position);
+      })) return state;
+      moved = true;
+      const bricks = state.bricks.map((brick) => cloneBrick(placedById.get(brick.id) ?? brick));
+      const connections = state.connections.filter((connection) => {
+        const aMoved = selectedIds.has(connection.brickA);
+        const bMoved = selectedIds.has(connection.brickB);
+        return aMoved === bMoved;
+      }).map((connection) => ({ ...connection }));
+      return withCommittedProject(state, bricks, connections, {
+        selectedId: state.selectedIds.at(-1) ?? null,
+        selectedIds: [...state.selectedIds],
+        multiSelectMode: true,
+      });
+    });
+    return moved;
   },
 
   rotateSelected: (direction) => {
@@ -319,6 +584,7 @@ export const useEditorStore = create<EditorStore>((set, get) => ({
         state,
         bricks,
         removeConnectionsForBrick(state.connections, selectedId),
+        { selectedId, selectedIds: [selectedId] },
       );
     });
   },
@@ -347,7 +613,7 @@ export const useEditorStore = create<EditorStore>((set, get) => ({
         state,
         bricks,
         removeConnectionsForBrick(state.connections, selectedId),
-        { selectedId },
+        { selectedId, selectedIds: [selectedId] },
       );
     });
   },
@@ -369,6 +635,7 @@ export const useEditorStore = create<EditorStore>((set, get) => ({
         removeConnectionsForBrick(state.connections, selected.id),
         {
           selectedId: selected.id,
+          selectedIds: [selected.id],
           toast: result.climbedLayers > 0
             ? `自动向上跨了 ${result.climbedLayers} 层`
             : null,
@@ -404,7 +671,7 @@ export const useEditorStore = create<EditorStore>((set, get) => ({
         state,
         bricks,
         state.connections.map((connection) => ({ ...connection })),
-        { selectedId },
+        { selectedId, selectedIds: [selectedId] },
       );
     });
   },
@@ -430,7 +697,7 @@ export const useEditorStore = create<EditorStore>((set, get) => ({
         state,
         [...state.bricks.map(cloneBrick), duplicate],
         state.connections.map((connection) => ({ ...connection })),
-        { selectedId: id },
+        { selectedId: id, selectedIds: [id], multiSelectMode: false },
       );
     });
     return id;
@@ -445,7 +712,7 @@ export const useEditorStore = create<EditorStore>((set, get) => ({
         state,
         state.bricks.filter((brick) => brick.id !== selectedId).map(cloneBrick),
         removeConnectionsForBrick(state.connections, selectedId),
-        { selectedId: null },
+        { selectedId: null, selectedIds: [], multiSelectMode: false },
       );
     });
   },
@@ -453,9 +720,24 @@ export const useEditorStore = create<EditorStore>((set, get) => ({
   clearProject: () => {
     set((state) => {
       if (state.bricks.length === 0 && state.connections.length === 0) {
-        return { selectedId: null, drag: null };
+        return {
+          selectedId: null,
+          selectedIds: [],
+          multiSelectMode: false,
+          selectionMarquee: null,
+          groupCopy: null,
+          groupMove: null,
+          drag: null,
+        };
       }
-      return withCommittedProject(state, [], [], { selectedId: null });
+      return withCommittedProject(state, [], [], {
+        selectedId: null,
+        selectedIds: [],
+        multiSelectMode: false,
+        selectionMarquee: null,
+        groupCopy: null,
+        groupMove: null,
+      });
     });
   },
 
@@ -469,6 +751,11 @@ export const useEditorStore = create<EditorStore>((set, get) => ({
         bricks: normalised.bricks,
         connections: normalised.connections,
         selectedId: null,
+        selectedIds: [],
+        multiSelectMode: false,
+        selectionMarquee: null,
+        groupCopy: null,
+        groupMove: null,
         past: state.past.slice(0, -1),
         future: [snapshotOf(state), ...state.future].slice(0, HISTORY_LIMIT),
         drag: null,
@@ -486,6 +773,11 @@ export const useEditorStore = create<EditorStore>((set, get) => ({
         bricks: normalised.bricks,
         connections: normalised.connections,
         selectedId: null,
+        selectedIds: [],
+        multiSelectMode: false,
+        selectionMarquee: null,
+        groupCopy: null,
+        groupMove: null,
         past: appendHistory(state.past, snapshotOf(state)),
         future: state.future.slice(1),
         drag: null,
@@ -532,7 +824,15 @@ export const useEditorStore = create<EditorStore>((set, get) => ({
           state,
           normalised.bricks,
           normalised.connections,
-          { selectedId: null, toast: '作品文件已打开' },
+          {
+            selectedId: null,
+            selectedIds: [],
+            multiSelectMode: false,
+            selectionMarquee: null,
+            groupCopy: null,
+            groupMove: null,
+            toast: '作品文件已打开',
+          },
         ),
       );
       return true;
@@ -543,7 +843,7 @@ export const useEditorStore = create<EditorStore>((set, get) => ({
   },
 
   startPaletteDrag: (definitionId, pointerStart, pointerId) => {
-    if (get().drag) return;
+    if (get().drag || get().groupCopy || get().groupMove) return;
     const definition = getBrickDefinition(definitionId);
     if (!definition) {
       set({ toast: '找不到这个积木' });
@@ -553,6 +853,9 @@ export const useEditorStore = create<EditorStore>((set, get) => ({
     const groundY = getBrickGroundY(definition);
     set({
       selectedId: null,
+      selectedIds: [],
+      multiSelectMode: false,
+      selectionMarquee: null,
       drag: {
         phase: 'dragging',
         source: 'palette',
@@ -578,11 +881,12 @@ export const useEditorStore = create<EditorStore>((set, get) => ({
   },
 
   startBrickDrag: (brickId, pointerStart, pointerId, grabOffset = [0, 0, 0]) => {
-    if (get().drag) return;
+    if (get().drag || get().groupCopy || get().groupMove || get().multiSelectMode) return;
     const brick = get().bricks.find((item) => item.id === brickId);
     if (!brick) return;
     set({
       selectedId: brickId,
+      selectedIds: [brickId],
       drag: {
         phase: 'dragging',
         source: 'brick',
@@ -665,6 +969,7 @@ export const useEditorStore = create<EditorStore>((set, get) => ({
         return {
           drag: null,
           selectedId: drag.source === 'brick' ? drag.brickId : state.selectedId,
+          selectedIds: drag.source === 'brick' ? [drag.brickId] : state.selectedIds,
           toast: '积木不能互相穿过，请换一个位置',
         };
       }
@@ -683,7 +988,11 @@ export const useEditorStore = create<EditorStore>((set, get) => ({
             connections.push({ ...committedConnection });
           }
         }
-        return withCommittedProject(state, bricks, connections, { selectedId: drag.brickId });
+        return withCommittedProject(state, bricks, connections, {
+          selectedId: drag.brickId,
+          selectedIds: [drag.brickId],
+          multiSelectMode: false,
+        });
       }
 
       const original = state.bricks.find((brick) => brick.id === drag.brickId);
@@ -707,7 +1016,11 @@ export const useEditorStore = create<EditorStore>((set, get) => ({
           connections.push({ ...committedConnection });
         }
       }
-      return withCommittedProject(state, bricks, connections, { selectedId: drag.brickId });
+      return withCommittedProject(state, bricks, connections, {
+        selectedId: drag.brickId,
+        selectedIds: [drag.brickId],
+        multiSelectMode: false,
+      });
     });
   },
 

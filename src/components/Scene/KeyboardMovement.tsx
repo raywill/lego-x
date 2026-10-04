@@ -30,7 +30,7 @@ export function KeyboardMovement() {
       ) return;
 
       const state = useEditorStore.getState();
-      if (!state.selectedId || state.drag) return;
+      if (!state.selectedId || state.drag || state.groupCopy || state.groupMove) return;
       event.preventDefault();
 
       cameraRight.set(1, 0, 0).applyQuaternion(camera.quaternion).normalize();
@@ -41,10 +41,15 @@ export function KeyboardMovement() {
         cameraForward.toArray() as Vec3Tuple,
         cameraUp.toArray() as Vec3Tuple,
       );
-      state.moveSelectedByGridStep(directionForArrow(
+      const direction = directionForArrow(
         event.key as 'ArrowLeft' | 'ArrowRight' | 'ArrowUp' | 'ArrowDown',
         axes,
-      ));
+      );
+      if (state.multiSelectMode && state.selectedIds.length > 1) {
+        state.moveSelectionByGridStep(direction);
+      } else {
+        state.moveSelectedByGridStep(direction);
+      }
     };
 
     window.addEventListener('keydown', onKeyDown);

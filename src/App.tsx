@@ -94,7 +94,17 @@ export function App() {
       if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'z') {
         event.preventDefault();
         if (event.shiftKey) state.redo(); else state.undo();
-      } else if ((event.key === 'Delete' || event.key === 'Backspace') && state.selectedId) {
+      } else if (event.key === 'Escape' && (state.groupCopy || state.groupMove)) {
+        event.preventDefault();
+        state.cancelGroupPlacement();
+      } else if (event.key === 'Escape' && state.multiSelectMode) {
+        event.preventDefault();
+        state.setMultiSelectMode(false);
+      } else if (
+        (event.key === 'Delete' || event.key === 'Backspace')
+        && state.selectedId
+        && !state.multiSelectMode
+      ) {
         event.preventDefault();
         state.deleteSelected();
       }
@@ -116,6 +126,7 @@ export function App() {
         <BrickPalette />
         <div className="scene-panel">
           <BrickScene view={view} resetKey={viewResetKey} />
+          <SelectionOverlay />
           <OnboardingHint />
           <SnapLegend />
           <CameraControls view={view} onChange={(nextView) => {
@@ -135,5 +146,30 @@ export function App() {
       </section>
       {toast && <div className={`toast ${toast.startsWith('咔哒') ? 'snap-toast' : ''}`} role="status">{toast}</div>}
     </main>
+  );
+}
+
+function SelectionOverlay() {
+  const marquee = useEditorStore((state) => state.selectionMarquee);
+  const multiSelectMode = useEditorStore((state) => state.multiSelectMode);
+  const groupCopy = useEditorStore((state) => state.groupCopy);
+  const groupMove = useEditorStore((state) => state.groupMove);
+  return (
+    <>
+      {marquee && (
+        <div
+          className="selection-marquee"
+          style={{
+            left: marquee.left,
+            top: marquee.top,
+            width: marquee.width,
+            height: marquee.height,
+          }}
+        />
+      )}
+      {multiSelectMode && !groupCopy && !groupMove && (
+        <div className="multi-select-hint">点选积木，或在底板空白处拖框</div>
+      )}
+    </>
   );
 }
