@@ -4,6 +4,7 @@ import { MathUtils, PerspectiveCamera, Plane, Raycaster, Vector2, Vector3 } from
 import { getBrickDefinition } from '../../bricks/catalog';
 import { BRICK_UNIT, PRINT_BED } from '../../config/brickConfig';
 import { hasBrickCollision } from '../../editor/collision/collisionEngine';
+import { computeInsertionPlacement } from '../../editor/dragging/insertionEngine';
 import { computeDropPlacement, isBrickAboveBed } from '../../editor/gravity/dropEngine';
 import { isBrickOnGrid } from '../../editor/grid/gridEngine';
 import {
@@ -11,7 +12,7 @@ import {
   getWorldConnectors,
   type WorldConnector,
 } from '../../editor/snapping/snapEngine';
-import { useEditorStore } from '../../store/editorStore';
+import { useEditorStore, type DragPlacementOption } from '../../store/editorStore';
 import type { BrickInstance } from '../../types/model';
 import { SnapHints } from './SnapHints';
 
@@ -43,6 +44,18 @@ function collectTargetConnectors(draggedBrickId: string): WorldConnector[] {
 
 function isAxisAligned(normal: readonly number[]): boolean {
   return normal.filter((component) => Math.abs(component) > 1e-5).length === 1;
+}
+
+function placementsDiffer(
+  first: DragPlacementOption | null,
+  second: DragPlacementOption | null,
+): boolean {
+  if (!first || !second) return false;
+  return first.landing.position.some(
+    (value, index) => Math.abs(value - second.landing.position[index]) > 1e-5,
+  ) || first.landing.rotation.some(
+    (value, index) => Math.abs(value - second.landing.rotation[index]) > 1e-5,
+  );
 }
 
 function playSnapFeedback(): void {
@@ -166,83 +179,107 @@ export function DragInteraction() {
         ],
         rotation: [...activeDrag.freeRotation],
       };
-      const drop = computeDropPlacement(dropProbe, state.bricks);
-      const landedPreview: BrickInstance = {
+      const topDrop = computeDropPlacement(dropProbe, state.bricks);
+      const topLanded: BrickInstance = {
         ...dropProbe,
-        position: [...drop.position],
-        rotation: [...drop.rotation],
+        position: [...topDrop.position],
+        rotation: [...topDrop.rotation],
       };
-      const heldPreview: BrickInstance = {
-        ...landedPreview,
+      const topHeld: BrickInstance = {
+        ...topLanded,
         position: [
-          landedPreview.position[0],
-          Math.max(activeDrag.planeY + HOLD_LIFT, landedPreview.position[1] + HOLD_LIFT),
-          landedPreview.position[2],
+          topLanded.position[0],
+          Math.max(activeDrag.planeY + HOLD_LIFT, topLanded.position[1] + HOLD_LIFT),
+          topLanded.position[2],
         ],
       };
-      const definition = getBrickDefinition(landedPreview.definitionId);
+      const definition = getBrickDefinition(topLanded.definitionId);
       if (!definition) return;
       const targets = collectTargetConnectors(activeDrag.brickId);
       const occupied = occupiedConnectorKeys(activeDrag.brickId);
-      const nearestCandidate = findBestSnap({
-        dragged: landedPreview,
-        draggedDefinition: definition,
-        targets,
-        occupiedConnectorKeys: occupied,
-        preserveDraggedRotation: true,
-        distanceResolver: (source, target) => {
-          const sourceScreen = new Vector3(...source.position).project(camera);
-          const targetScreen = new Vector3(...target.position).project(camera);
-          const pixels = Math.hypot(
-            (sourceScreen.x - targetScreen.x) * bounds.width * 0.5,
-            (sourceScreen.y - targetScreen.y) * bounds.height * 0.5,
-          );
-          if (!(camera instanceof PerspectiveCamera)) return pixels * 0.14;
-          const depth = camera.position.distanceTo(new Vector3(...target.position));
-          const visibleHeight = 2 * Math.tan(MathUtils.degToRad(camera.fov) / 2) * depth;
-          return pixels * (visibleHeight / bounds.height);
-        },
-        transformValidator: (transform, target, source) => {
-          const transformed: BrickInstance = {
-            ...landedPreview,
-            position: [...transform.position],
-            rotation: [...transform.rotation],
-          };
-          // Axis-aligned connectors must pass the full body-overlap check.
-          // Sloped connector pairs are trusted at their exact mating surface,
-          // because their axis-aligned bounds overlap even when the solids do not.
-          const slopedContact = !isAxisAligned(source.normal) || !isAxisAligned(target.normal);
-          const ignoredTargets = slopedContact
-            ? new Set([target.brickId])
-            : new Set<string>();
-          return isBrickOnGrid(transformed)
-            && !hasBrickCollision(transformed, state.bricks, ignoredTargets);
-        },
-      });
-      const snappedPreview = nearestCandidate?.committable
-        ? {
-            ...landedPreview,
-            position: nearestCandidate.transform.position,
-            rotation: nearestCandidate.transform.rotation,
-          }
+      const createOption = (
+        landed: BrickInstance,
+        carried: BrickInstance,
+        drop: ReturnType<typeof computeDropPlacement>,
+      ): DragPlacementOption => {
+        const nearestCandidate = findBestSnap({
+          dragged: landed,
+          draggedDefinition: definition,
+          targets,
+          occupiedConnectorKeys: occupied,
+          preserveDraggedRotation: true,
+          distanceResolver: (source, target) => {
+            const sourceScreen = new Vector3(...source.position).project(camera);
+            const targetScreen = new Vector3(...target.position).project(camera);
+            const pixels = Math.hypot(
+              (sourceScreen.x - targetScreen.x) * bounds.width * 0.5,
+              (sourceScreen.y - targetScreen.y) * bounds.height * 0.5,
+            );
+            if (!(camera instanceof PerspectiveCamera)) return pixels * 0.14;
+            const depth = camera.position.distanceTo(new Vector3(...target.position));
+            const visibleHeight = 2 * Math.tan(MathUtils.degToRad(camera.fov) / 2) * depth;
+            return pixels * (visibleHeight / bounds.height);
+          },
+          transformValidator: (transform, target, source) => {
+            const transformed: BrickInstance = {
+              ...landed,
+              position: [...transform.position],
+              rotation: [...transform.rotation],
+            };
+            const slopedContact = !isAxisAligned(source.normal) || !isAxisAligned(target.normal);
+            const ignoredTargets = slopedContact
+              ? new Set([target.brickId])
+              : new Set<string>();
+            return isBrickOnGrid(transformed)
+              && !hasBrickCollision(transformed, state.bricks, ignoredTargets);
+          },
+        });
+        const snapped = nearestCandidate?.committable
+          ? {
+              ...landed,
+              position: nearestCandidate.transform.position,
+              rotation: nearestCandidate.transform.rotation,
+            }
+          : null;
+        const candidate = snapped && (
+          !isBrickAboveBed(snapped) || !isBrickOnGrid(snapped)
+        ) ? null : nearestCandidate;
+        const landing = candidate?.committable
+          ? { ...landed, position: candidate.transform.position, rotation: candidate.transform.rotation }
+          : landed;
+        return {
+          preview: candidate?.committable ? landing : carried,
+          landing,
+          candidate,
+          drop: candidate?.committable ? null : drop,
+        };
+      };
+
+      const topOption = createOption(topLanded, topHeld, topDrop);
+      const insertion = activeDrag.source === 'brick'
+        ? computeInsertionPlacement(
+            {
+              ...activeDrag.preview,
+              position: [activeDrag.preview.position[0], activeDrag.planeY, activeDrag.preview.position[2]],
+              rotation: [...activeDrag.freeRotation],
+            },
+            [
+              intersection.x + activeDrag.grabOffset[0],
+              intersection.z + activeDrag.grabOffset[2],
+            ],
+            activeDrag.insertionAnchor,
+            state.bricks,
+          )
         : null;
-      // A connector below the print bed is never a valid target. Rejecting the
-      // candidate preserves the connection geometry instead of lifting it and
-      // silently breaking the snap.
-      const candidate = snappedPreview && (
-        !isBrickAboveBed(snappedPreview) || !isBrickOnGrid(snappedPreview)
-      )
-        ? null
-        : nearestCandidate;
-      const displayedPreview: BrickInstance = candidate?.committable
-        ? { ...landedPreview, position: candidate.transform.position, rotation: candidate.transform.rotation }
-        : heldPreview;
-      state.updateDragPreview(
-        displayedPreview,
-        candidate,
+      const insertOption = insertion
+        ? createOption(insertion.landed, insertion.direct, insertion.drop)
+        : null;
+      state.updateDragPlacement(
+        topOption,
+        insertOption,
         true,
         pointerTravel >= 4,
-        candidate?.committable ? null : drop,
+        insertion?.direct.position,
       );
     };
 
@@ -266,6 +303,11 @@ export function DragInteraction() {
       if (!completedDrag) return;
       if (!completedDrag.overScene) {
         state.cancelDrag();
+      } else if (
+        !completedDrag.placementExplicit
+        && placementsDiffer(completedDrag.topOption, completedDrag.insertOption)
+      ) {
+        state.beginPlacementChoice();
       } else {
         const snapped = Boolean(completedDrag.candidate?.committable);
         if (snapped) {
@@ -278,6 +320,25 @@ export function DragInteraction() {
           state.commitDrag();
         }
       }
+    };
+
+    const handlePlacementKeys = (event: KeyboardEvent) => {
+      const activeDrag = useEditorStore.getState().drag;
+      if (!activeDrag) return;
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        useEditorStore.getState().cancelDrag();
+        return;
+      }
+      if (
+        event.code !== 'Space'
+        || activeDrag.phase !== 'dragging'
+        || !placementsDiffer(activeDrag.topOption, activeDrag.insertOption)
+      ) return;
+      event.preventDefault();
+      useEditorStore.getState().setDragPlacementMode(
+        activeDrag.placementMode === 'insert' ? 'top' : 'insert',
+      );
     };
 
     const cancelDrag = (event: Event) => {
@@ -300,6 +361,7 @@ export function DragInteraction() {
     window.addEventListener('pointerup', finishDrag);
     window.addEventListener('pointercancel', cancelDrag);
     window.addEventListener('blur', cancelDrag);
+    window.addEventListener('keydown', handlePlacementKeys);
     return () => {
       if (dropAnimationFrame !== null) window.cancelAnimationFrame(dropAnimationFrame);
       const activeDrag = useEditorStore.getState().drag;
@@ -308,6 +370,7 @@ export function DragInteraction() {
       window.removeEventListener('pointerup', finishDrag);
       window.removeEventListener('pointercancel', cancelDrag);
       window.removeEventListener('blur', cancelDrag);
+      window.removeEventListener('keydown', handlePlacementKeys);
     };
   }, [camera, gl]);
 

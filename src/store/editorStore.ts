@@ -53,9 +53,17 @@ import type {
 
 export type RotationDirection = 'left' | 'right' | -1 | 1;
 export type FlipDirection = 'up' | 'down';
+export type DragPlacementMode = 'insert' | 'top';
+
+export interface DragPlacementOption {
+  preview: BrickInstance;
+  landing: BrickInstance;
+  candidate: SnapCandidate | null;
+  drop: DropResult | null;
+}
 
 export interface DragState {
-  phase: 'dragging' | 'dropping';
+  phase: 'dragging' | 'choosing' | 'dropping';
   source: 'palette' | 'brick';
   definitionId: string;
   brickId: string;
@@ -69,6 +77,11 @@ export interface DragState {
   grabOffset: Vec3Tuple;
   hasMoved: boolean;
   freeRotation: EulerTuple;
+  placementMode: DragPlacementMode;
+  placementExplicit: boolean;
+  topOption: DragPlacementOption | null;
+  insertOption: DragPlacementOption | null;
+  insertionAnchor: Vec3Tuple;
 }
 
 export type EditorDragState = DragState;
@@ -154,6 +167,15 @@ export interface EditorStore {
     hasMoved?: boolean,
     drop?: DropResult | null,
   ) => void;
+  updateDragPlacement: (
+    topOption: DragPlacementOption,
+    insertOption: DragPlacementOption | null,
+    overScene: boolean,
+    hasMoved: boolean,
+    insertionAnchor?: Vec3Tuple,
+  ) => void;
+  setDragPlacementMode: (mode: DragPlacementMode, explicit?: boolean) => void;
+  beginPlacementChoice: () => void;
   beginDropAnimation: () => void;
   updateDropAnimationPreview: (preview: BrickInstance) => void;
   commitDrag: (connection?: Connection) => void;
@@ -172,6 +194,21 @@ const cloneBrick = (brick: BrickInstance): BrickInstance => ({
   ...brick,
   position: [...brick.position],
   rotation: [...brick.rotation],
+});
+
+const clonePlacementOption = (option: DragPlacementOption): DragPlacementOption => ({
+  preview: cloneBrick(option.preview),
+  landing: cloneBrick(option.landing),
+  candidate: option.candidate,
+  drop: option.drop ? {
+    ...option.drop,
+    position: [...option.drop.position],
+    rotation: [...option.drop.rotation],
+    contact: {
+      ...option.drop.contact,
+      polygon: option.drop.contact.polygon.map((point) => [...point]) as typeof option.drop.contact.polygon,
+    },
+  } : null,
 });
 
 const safeBrick = (brick: BrickInstance): BrickInstance =>
@@ -876,6 +913,11 @@ export const useEditorStore = create<EditorStore>((set, get) => ({
         grabOffset: [0, 0, 0],
         hasMoved: false,
         freeRotation: [0, 0, 0],
+        placementMode: 'top',
+        placementExplicit: false,
+        topOption: null,
+        insertOption: null,
+        insertionAnchor: [0, groundY, 0],
       },
     });
   },
@@ -902,6 +944,11 @@ export const useEditorStore = create<EditorStore>((set, get) => ({
         grabOffset: [...grabOffset],
         hasMoved: false,
         freeRotation: [...brick.rotation],
+        placementMode: 'top',
+        placementExplicit: false,
+        topOption: null,
+        insertOption: null,
+        insertionAnchor: [...brick.position],
       },
     });
   },
@@ -920,6 +967,66 @@ export const useEditorStore = create<EditorStore>((set, get) => ({
           hasMoved: state.drag.hasMoved || hasMoved,
         },
       };
+    });
+  },
+
+  updateDragPlacement: (
+    topOption,
+    insertOption,
+    overScene,
+    hasMoved,
+    insertionAnchor,
+  ) => {
+    set((state) => {
+      if (!state.drag || state.drag.phase !== 'dragging') return state;
+      const preferredMode = state.drag.placementExplicit
+        ? state.drag.placementMode
+        : state.drag.source === 'brick' && insertOption
+          ? 'insert'
+          : 'top';
+      const placementMode = preferredMode === 'insert' && insertOption ? 'insert' : 'top';
+      const selectedOption = placementMode === 'insert' ? insertOption! : topOption;
+      return {
+        drag: {
+          ...state.drag,
+          preview: cloneBrick(selectedOption.preview),
+          candidate: selectedOption.candidate,
+          drop: selectedOption.drop,
+          overScene,
+          hasMoved: state.drag.hasMoved || hasMoved,
+          placementMode,
+          topOption: clonePlacementOption(topOption),
+          insertOption: insertOption ? clonePlacementOption(insertOption) : null,
+          insertionAnchor: insertionAnchor
+            ? [...insertionAnchor]
+            : [...state.drag.insertionAnchor],
+        },
+      };
+    });
+  },
+
+  setDragPlacementMode: (mode, explicit = true) => {
+    set((state) => {
+      if (!state.drag || state.drag.phase === 'dropping') return state;
+      const option = mode === 'insert' ? state.drag.insertOption : state.drag.topOption;
+      if (!option) return state;
+      return {
+        drag: {
+          ...state.drag,
+          preview: cloneBrick(option.preview),
+          candidate: option.candidate,
+          drop: option.drop,
+          placementMode: mode,
+          placementExplicit: state.drag.placementExplicit || explicit,
+        },
+      };
+    });
+  },
+
+  beginPlacementChoice: () => {
+    set((state) => {
+      if (!state.drag || state.drag.phase !== 'dragging') return state;
+      return { drag: { ...state.drag, phase: 'choosing' } };
     });
   },
 

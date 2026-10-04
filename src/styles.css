@@ -188,6 +188,43 @@ button:focus-visible { outline: 3px solid #ffd84d; outline-offset: 2px; }
   white-space: nowrap;
 }
 
+.placement-choice {
+  position: absolute;
+  z-index: 12;
+  top: 77px;
+  left: 50%;
+  translate: -50% 0;
+  color: #403b55;
+  background: rgba(255,255,255,.97);
+  border: 1px solid #d8d4ee;
+  border-radius: 14px;
+  box-shadow: 0 10px 30px rgba(50,43,102,.18);
+  backdrop-filter: blur(10px);
+}
+.placement-choice-hint {
+  display: grid;
+  grid-template-columns: auto auto;
+  gap: 4px 8px;
+  padding: 8px;
+  pointer-events: none;
+}
+.placement-choice-hint span { padding: 6px 10px; color: #8a8598; border-radius: 8px; font-size: .79rem; font-weight: 800; }
+.placement-choice-hint span.is-active { color: #493db7; background: #eeeaff; }
+.placement-choice-hint small { grid-column: 1 / -1; color: #8b8798; text-align: center; font-size: .66rem; font-weight: 700; }
+.placement-choice.is-choosing {
+  width: 292px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 7px;
+  padding: 11px;
+}
+.placement-choice.is-choosing strong { grid-column: 1 / -1; padding: 1px 3px 5px; text-align: center; font-size: .88rem; }
+.placement-choice.is-choosing button { min-height: 70px; display: grid; grid-template-columns: 25px 1fr; grid-template-rows: 24px 18px; align-items: center; padding: 8px; color: #555067; background: #faf9ff; border: 1px solid #e0ddef; border-radius: 10px; cursor: pointer; text-align: left; }
+.placement-choice.is-choosing button:hover, .placement-choice.is-choosing button.is-active { color: #493db7; background: #eeeaff; border-color: #9b8ff1; }
+.placement-choice.is-choosing button > span { grid-row: 1 / 3; font-size: 1.35rem; font-weight: 900; }
+.placement-choice.is-choosing button b { font-size: .8rem; }.placement-choice.is-choosing button small { color: #898497; font-size: .64rem; }
+.placement-choice.is-choosing .placement-cancel { grid-column: 1 / -1; min-height: 34px; display: block; padding: 4px; text-align: center; }
+
 .scene-hint {
   position: absolute;
   top: 18px;
@@ -396,6 +433,7 @@ button:focus-visible { outline: 3px solid #ffd84d; outline-offset: 2px; }
   .camera-controls { top: 10px; right: 10px; }.camera-controls button { min-width: 43px; }
   .scene-hint, .snap-legend { top: 61px; }.warning-stack { top: 112px; left: 10px; max-width: calc(100% - 20px); }
   .multi-select-hint { top: 61px; }
+  .placement-choice { top: 112px; }
   .bed-label { display: none; }.scene-count { right: 10px; bottom: 10px; }
   .selection-toolbar { bottom: 10px; }.selected-name { display: none; }.selection-divider { display: none; }
 }

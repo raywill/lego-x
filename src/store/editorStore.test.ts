@@ -286,6 +286,34 @@ describe('editor store', () => {
     expect(useEditorStore.getState().toast).toContain('不能互相穿过');
   });
 
+  it('keeps both ambiguous drag placements and lets an explicit choice win', () => {
+    const id = useEditorStore.getState().addBrick('cube-1', [5, 5, 5]);
+    if (!id) throw new Error('Expected a test brick.');
+    useEditorStore.getState().startBrickDrag(id);
+    const drag = useEditorStore.getState().drag;
+    if (!drag) throw new Error('Expected an active drag.');
+    const top = { ...drag.preview, position: [25, 35, 5] as [number, number, number] };
+    const inside = { ...drag.preview, position: [25, 15, 5] as [number, number, number] };
+
+    useEditorStore.getState().updateDragPlacement(
+      { preview: top, landing: top, candidate: null, drop: null },
+      { preview: inside, landing: inside, candidate: null, drop: null },
+      true,
+      true,
+      inside.position,
+    );
+    expect(useEditorStore.getState().drag?.placementMode).toBe('insert');
+    expect(useEditorStore.getState().drag?.preview.position).toEqual(inside.position);
+
+    useEditorStore.getState().beginPlacementChoice();
+    expect(useEditorStore.getState().drag?.phase).toBe('choosing');
+    useEditorStore.getState().setDragPlacementMode('top');
+    useEditorStore.getState().commitDrag();
+
+    expect(useEditorStore.getState().bricks[0].position).toEqual(top.position);
+    expect(useEditorStore.getState().drag).toBeNull();
+  });
+
   it('repairs overlapping bodies when opening a legacy project', () => {
     const serialized = serializeProject({
       bricks: [

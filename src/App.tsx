@@ -127,6 +127,7 @@ export function App() {
         <div className="scene-panel">
           <BrickScene view={view} resetKey={viewResetKey} />
           <SelectionOverlay />
+          <PlacementChoice />
           <OnboardingHint />
           <SnapLegend />
           <CameraControls view={view} onChange={(nextView) => {
@@ -171,5 +172,46 @@ function SelectionOverlay() {
         <div className="multi-select-hint">点选积木，或在底板空白处拖框</div>
       )}
     </>
+  );
+}
+
+function PlacementChoice() {
+  const drag = useEditorStore((state) => state.drag);
+  if (!drag?.topOption || !drag.insertOption) return null;
+  const different = drag.topOption.landing.position.some(
+    (value, index) => Math.abs(value - drag.insertOption!.landing.position[index]) > 1e-5,
+  );
+  if (!different) return null;
+
+  const choose = (mode: 'insert' | 'top') => {
+    const state = useEditorStore.getState();
+    state.setDragPlacementMode(mode);
+    state.commitDrag();
+    state.setToast(mode === 'insert' ? '已塞入空隙' : '已放到顶部');
+  };
+
+  if (drag.phase !== 'choosing') {
+    return (
+      <div className="placement-choice placement-choice-hint" aria-live="polite">
+        <span className={drag.placementMode === 'insert' ? 'is-active' : ''}>→ 塞进去</span>
+        <span className={drag.placementMode === 'top' ? 'is-active' : ''}>↓ 放上面</span>
+        <small>空格切换 · 松手确认</small>
+      </div>
+    );
+  }
+
+  return (
+    <div className="placement-choice is-choosing" role="dialog" aria-label="选择积木放置位置">
+      <strong>放在哪里？</strong>
+      <button type="button" className={drag.placementMode === 'insert' ? 'is-active' : ''} onClick={() => choose('insert')}>
+        <span>→</span><b>塞进去</b><small>从侧面进入空隙</small>
+      </button>
+      <button type="button" className={drag.placementMode === 'top' ? 'is-active' : ''} onClick={() => choose('top')}>
+        <span>↓</span><b>放上面</b><small>从顶部自然落下</small>
+      </button>
+      <button type="button" className="placement-cancel" onClick={() => useEditorStore.getState().cancelDrag()}>
+        取消
+      </button>
+    </div>
   );
 }
