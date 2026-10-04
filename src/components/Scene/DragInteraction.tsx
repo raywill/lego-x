@@ -46,18 +46,6 @@ function isAxisAligned(normal: readonly number[]): boolean {
   return normal.filter((component) => Math.abs(component) > 1e-5).length === 1;
 }
 
-function placementsDiffer(
-  first: DragPlacementOption | null,
-  second: DragPlacementOption | null,
-): boolean {
-  if (!first || !second) return false;
-  return first.landing.position.some(
-    (value, index) => Math.abs(value - second.landing.position[index]) > 1e-5,
-  ) || first.landing.rotation.some(
-    (value, index) => Math.abs(value - second.landing.rotation[index]) > 1e-5,
-  );
-}
-
 function playSnapFeedback(): void {
   const AudioContextConstructor = window.AudioContext
     ?? (window as typeof window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
@@ -303,11 +291,6 @@ export function DragInteraction() {
       if (!completedDrag) return;
       if (!completedDrag.overScene) {
         state.cancelDrag();
-      } else if (
-        !completedDrag.placementExplicit
-        && placementsDiffer(completedDrag.topOption, completedDrag.insertOption)
-      ) {
-        state.beginPlacementChoice();
       } else {
         const snapped = Boolean(completedDrag.candidate?.committable);
         if (snapped) {
@@ -320,25 +303,6 @@ export function DragInteraction() {
           state.commitDrag();
         }
       }
-    };
-
-    const handlePlacementKeys = (event: KeyboardEvent) => {
-      const activeDrag = useEditorStore.getState().drag;
-      if (!activeDrag) return;
-      if (event.key === 'Escape') {
-        event.preventDefault();
-        useEditorStore.getState().cancelDrag();
-        return;
-      }
-      if (
-        event.code !== 'Space'
-        || activeDrag.phase !== 'dragging'
-        || !placementsDiffer(activeDrag.topOption, activeDrag.insertOption)
-      ) return;
-      event.preventDefault();
-      useEditorStore.getState().setDragPlacementMode(
-        activeDrag.placementMode === 'insert' ? 'top' : 'insert',
-      );
     };
 
     const cancelDrag = (event: Event) => {
@@ -361,7 +325,6 @@ export function DragInteraction() {
     window.addEventListener('pointerup', finishDrag);
     window.addEventListener('pointercancel', cancelDrag);
     window.addEventListener('blur', cancelDrag);
-    window.addEventListener('keydown', handlePlacementKeys);
     return () => {
       if (dropAnimationFrame !== null) window.cancelAnimationFrame(dropAnimationFrame);
       const activeDrag = useEditorStore.getState().drag;
@@ -370,7 +333,6 @@ export function DragInteraction() {
       window.removeEventListener('pointerup', finishDrag);
       window.removeEventListener('pointercancel', cancelDrag);
       window.removeEventListener('blur', cancelDrag);
-      window.removeEventListener('keydown', handlePlacementKeys);
     };
   }, [camera, gl]);
 

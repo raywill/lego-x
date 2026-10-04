@@ -64,7 +64,7 @@ export interface DragPlacementOption {
 }
 
 export interface DragState {
-  phase: 'dragging' | 'choosing' | 'dropping';
+  phase: 'dragging' | 'dropping';
   source: 'palette' | 'brick';
   definitionId: string;
   brickId: string;
@@ -79,7 +79,6 @@ export interface DragState {
   hasMoved: boolean;
   freeRotation: EulerTuple;
   placementMode: DragPlacementMode;
-  placementExplicit: boolean;
   topOption: DragPlacementOption | null;
   insertOption: DragPlacementOption | null;
   insertionAnchor: Vec3Tuple;
@@ -167,8 +166,6 @@ export interface EditorStore {
     hasMoved: boolean,
     insertionAnchor?: Vec3Tuple,
   ) => void;
-  setDragPlacementMode: (mode: DragPlacementMode, explicit?: boolean) => void;
-  beginPlacementChoice: () => void;
   beginDropAnimation: () => void;
   updateDropAnimationPreview: (preview: BrickInstance) => void;
   commitDrag: (connection?: Connection) => void;
@@ -928,7 +925,6 @@ export const useEditorStore = create<EditorStore>((set, get) => ({
         hasMoved: false,
         freeRotation: [0, 0, 0],
         placementMode: 'top',
-        placementExplicit: false,
         topOption: null,
         insertOption: null,
         insertionAnchor: [0, groundY, 0],
@@ -959,7 +955,6 @@ export const useEditorStore = create<EditorStore>((set, get) => ({
         hasMoved: false,
         freeRotation: [...brick.rotation],
         placementMode: 'top',
-        placementExplicit: false,
         topOption: null,
         insertOption: null,
         insertionAnchor: [...brick.position],
@@ -993,13 +988,8 @@ export const useEditorStore = create<EditorStore>((set, get) => ({
   ) => {
     set((state) => {
       if (!state.drag || state.drag.phase !== 'dragging') return state;
-      const preferredMode = state.drag.placementExplicit
-        ? state.drag.placementMode
-        : state.drag.source === 'brick' && insertOption
-          ? 'insert'
-          : 'top';
-      const placementMode = preferredMode === 'insert' && insertOption ? 'insert' : 'top';
-      const selectedOption = placementMode === 'insert' ? insertOption! : topOption;
+      const placementMode: DragPlacementMode = 'top';
+      const selectedOption = topOption;
       return {
         drag: {
           ...state.drag,
@@ -1016,31 +1006,6 @@ export const useEditorStore = create<EditorStore>((set, get) => ({
             : [...state.drag.insertionAnchor],
         },
       };
-    });
-  },
-
-  setDragPlacementMode: (mode, explicit = true) => {
-    set((state) => {
-      if (!state.drag || state.drag.phase === 'dropping') return state;
-      const option = mode === 'insert' ? state.drag.insertOption : state.drag.topOption;
-      if (!option) return state;
-      return {
-        drag: {
-          ...state.drag,
-          preview: cloneBrick(option.preview),
-          candidate: option.candidate,
-          drop: option.drop,
-          placementMode: mode,
-          placementExplicit: state.drag.placementExplicit || explicit,
-        },
-      };
-    });
-  },
-
-  beginPlacementChoice: () => {
-    set((state) => {
-      if (!state.drag || state.drag.phase !== 'dragging') return state;
-      return { drag: { ...state.drag, phase: 'choosing' } };
     });
   },
 

@@ -330,7 +330,7 @@ describe('editor store', () => {
     expect(useEditorStore.getState().toast).toContain('不能互相穿过');
   });
 
-  it('keeps both ambiguous drag placements and lets an explicit choice win', () => {
+  it('uses the top placement directly when a lower alternative also exists', () => {
     const id = useEditorStore.getState().addBrick('cube-1', [5, 5, 5]);
     if (!id) throw new Error('Expected a test brick.');
     useEditorStore.getState().startBrickDrag(id);
@@ -346,12 +346,8 @@ describe('editor store', () => {
       true,
       inside.position,
     );
-    expect(useEditorStore.getState().drag?.placementMode).toBe('insert');
-    expect(useEditorStore.getState().drag?.preview.position).toEqual(inside.position);
-
-    useEditorStore.getState().beginPlacementChoice();
-    expect(useEditorStore.getState().drag?.phase).toBe('choosing');
-    useEditorStore.getState().setDragPlacementMode('top');
+    expect(useEditorStore.getState().drag?.placementMode).toBe('top');
+    expect(useEditorStore.getState().drag?.preview.position).toEqual(top.position);
     useEditorStore.getState().commitDrag();
 
     expect(useEditorStore.getState().bricks[0].position).toEqual(top.position);

@@ -64,14 +64,6 @@ function SceneContents({ view, resetKey }: { view: CameraView; resetKey: number 
         rotation: [...drag.drop.rotation] as BrickInstance['rotation'],
       }
     : null;
-  const alternativeOption = drag?.placementMode === 'insert'
-    ? drag.topOption
-    : drag?.insertOption;
-  const alternativeLanding = alternativeOption && drag && alternativeOption.landing.position.some(
-    (value, index) => Math.abs(value - (
-      drag.placementMode === 'insert' ? drag.insertOption! : drag.topOption!
-    ).landing.position[index]) > 1e-5,
-  ) ? alternativeOption.landing : null;
 
   return (
     <>
@@ -109,9 +101,6 @@ function SceneContents({ view, resetKey }: { view: CameraView; resetKey: number 
       ) : showDragPreview && drag?.overScene ? (
         <BrickObject brick={drag.preview} opacity={0.68} selected ghost />
       ) : null}
-      {showDragPreview && drag?.overScene && alternativeLanding && (
-        <BrickObject brick={alternativeLanding} opacity={0.2} ghost />
-      )}
       {groupCopy?.bricks.map((brick) => (
         <BrickObject brick={brick} opacity={0.58} selected ghost key={brick.id} />
       ))}
