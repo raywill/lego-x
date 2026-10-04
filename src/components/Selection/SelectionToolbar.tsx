@@ -185,7 +185,7 @@ export function SelectionToolbar() {
           </div>
         )}
       </div>
-      <button type="button" onClick={() => setMultiSelectMode(true)} aria-label="进入多选模式" title="圈选或点选多个积木"><BoxSelect size={19} /><span>多选</span></button>
+      <button type="button" onClick={() => setMultiSelectMode(true)} aria-label="进入多选模式" title="逐个点选多个积木"><BoxSelect size={19} /><span>多选</span></button>
       <button type="button" onClick={selectConnectedBricks} aria-label="选择所有相连积木" title="选择所有相连积木"><Link2 size={19} /><span>选相连</span></button>
       <button type="button" onClick={() => rotateSelected(-1)} aria-label="向左转 90°" title="向左转 90°"><RotateCcw size={19} /><span>左转</span></button>
       <button type="button" onClick={() => rotateSelected(1)} aria-label="向右转 90°" title="向右转 90°"><RotateCw size={19} /><span>右转</span></button>

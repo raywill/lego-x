@@ -101,6 +101,16 @@ export function App() {
         event.preventDefault();
         state.setMultiSelectMode(false);
       } else if (
+        (event.code === 'Space' || event.key === ' ')
+        && state.selectedId
+        && !state.drag
+        && !state.groupCopy
+        && !state.groupMove
+        && !target?.closest('button, [role="menu"], select')
+      ) {
+        event.preventDefault();
+        state.lowerSelectionOneLevel();
+      } else if (
         (event.key === 'Delete' || event.key === 'Backspace')
         && state.selectedId
         && !state.multiSelectMode
@@ -151,25 +161,13 @@ export function App() {
 }
 
 function SelectionOverlay() {
-  const marquee = useEditorStore((state) => state.selectionMarquee);
   const multiSelectMode = useEditorStore((state) => state.multiSelectMode);
   const groupCopy = useEditorStore((state) => state.groupCopy);
   const groupMove = useEditorStore((state) => state.groupMove);
   return (
     <>
-      {marquee && (
-        <div
-          className="selection-marquee"
-          style={{
-            left: marquee.left,
-            top: marquee.top,
-            width: marquee.width,
-            height: marquee.height,
-          }}
-        />
-      )}
       {multiSelectMode && !groupCopy && !groupMove && (
-        <div className="multi-select-hint">点选积木，或在底板空白处拖框</div>
+        <div className="multi-select-hint">逐个点击积木来选择或取消</div>
       )}
     </>
   );

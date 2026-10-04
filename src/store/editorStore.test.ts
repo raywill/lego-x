@@ -17,7 +17,6 @@ const resetStore = () => {
     selectedId: null,
     selectedIds: [],
     multiSelectMode: false,
-    selectionMarquee: null,
     groupCopy: null,
     groupMove: null,
     past: [],
@@ -235,6 +234,51 @@ describe('editor store', () => {
     useEditorStore.getState().undo();
     expect(useEditorStore.getState().bricks.map(({ position }) => position))
       .toEqual([[5, 5, 5], [15, 5, 5]]);
+  });
+
+  it('switches a selected brick to the nearest lower free layer and stays undoable', () => {
+    useEditorStore.setState({
+      bricks: [
+        { id: 'moving', definitionId: 'cube-1', position: [5, 35, 5], rotation: [0, 0, 0] },
+        { id: 'roof', definitionId: 'cube-1', position: [5, 25, 5], rotation: [0, 0, 0] },
+      ],
+      selectedId: 'moving',
+      selectedIds: ['moving'],
+    });
+
+    expect(useEditorStore.getState().lowerSelectionOneLevel()).toBe(true);
+    expect(useEditorStore.getState().bricks.find(({ id }) => id === 'moving')?.position)
+      .toEqual([5, 15, 5]);
+    expect(useEditorStore.getState().bricks.find(({ id }) => id === 'roof')?.position)
+      .toEqual([5, 25, 5]);
+
+    useEditorStore.getState().undo();
+    expect(useEditorStore.getState().bricks.find(({ id }) => id === 'moving')?.position)
+      .toEqual([5, 35, 5]);
+  });
+
+  it('lowers a multi-selection rigidly and keeps only its internal connections', () => {
+    const cubeDefinition = BRICK_DEFINITIONS.find(({ id }) => id === 'cube-1');
+    const magnet = cubeDefinition?.connectors.find(({ type }) => type === 'magnet');
+    if (!magnet) throw new Error('Expected cube side connectors.');
+    const internal = createConnection('first', magnet.id, 'second', magnet.id);
+    const external = createConnection('second', magnet.id, 'neighbor', magnet.id);
+    useEditorStore.setState({
+      bricks: [
+        { id: 'first', definitionId: 'cube-1', position: [5, 25, 5], rotation: [0, 0, 0] },
+        { id: 'second', definitionId: 'cube-1', position: [15, 25, 5], rotation: [0, 0, 0] },
+        { id: 'neighbor', definitionId: 'cube-1', position: [25, 5, 5], rotation: [0, 0, 0] },
+      ],
+      connections: [internal, external],
+      selectedId: 'second',
+      selectedIds: ['first', 'second'],
+      multiSelectMode: true,
+    });
+
+    expect(useEditorStore.getState().lowerSelectionOneLevel()).toBe(true);
+    expect(useEditorStore.getState().bricks.slice(0, 2).map(({ position }) => position))
+      .toEqual([[5, 20, 5], [15, 20, 5]]);
+    expect(useEditorStore.getState().connections).toEqual([internal]);
   });
 
   it('moves a selected group by preview and keeps internal connections only', () => {

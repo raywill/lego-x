@@ -9,13 +9,11 @@ import { DragInteraction } from './DragInteraction';
 import { GravityDropPreview } from './GravityDropPreview';
 import { GroupPlacementInteraction } from './GroupPlacementInteraction';
 import { KeyboardMovement } from './KeyboardMovement';
-import { MarqueeSelection } from './MarqueeSelection';
 import { PrintBed } from './PrintBed';
 
 function SceneContents({ view, resetKey }: { view: CameraView; resetKey: number }) {
   const bricks = useEditorStore((state) => state.bricks);
   const selectedIds = useEditorStore((state) => state.selectedIds);
-  const multiSelectMode = useEditorStore((state) => state.multiSelectMode);
   const groupCopy = useEditorStore((state) => state.groupCopy);
   const groupMove = useEditorStore((state) => state.groupMove);
   const drag = useEditorStore((state) => state.drag);
@@ -120,14 +118,13 @@ function SceneContents({ view, resetKey }: { view: CameraView; resetKey: number 
       {groupMove?.bricks.map((brick) => (
         <BrickObject brick={brick} opacity={0.68} selected ghost key={brick.id} />
       ))}
-      <MarqueeSelection />
       <GroupPlacementInteraction />
       <DragInteraction />
       <KeyboardMovement />
       <CameraRig
         view={view}
         resetKey={resetKey}
-        dragging={Boolean(drag) || Boolean(groupCopy) || Boolean(groupMove) || multiSelectMode}
+        dragging={Boolean(drag) || Boolean(groupCopy) || Boolean(groupMove)}
       />
     </>
   );
@@ -137,10 +134,13 @@ export function BrickScene({ view, resetKey }: { view: CameraView; resetKey: num
   const selectBrick = useEditorStore((state) => state.selectBrick);
   return (
     <Canvas
+      aria-label="3D 搭建区"
+      tabIndex={0}
       shadows="basic"
       dpr={[1, 1.75]}
       camera={{ position: [118, 92, 132], fov: 41, near: 0.1, far: 700 }}
       gl={{ antialias: true, alpha: false, powerPreference: 'high-performance' }}
+      onPointerDownCapture={(event) => event.currentTarget.focus()}
       onPointerMissed={() => {
         const state = useEditorStore.getState();
         if (!state.multiSelectMode && !state.groupCopy && !state.groupMove) selectBrick(null);

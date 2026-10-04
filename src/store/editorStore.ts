@@ -32,6 +32,7 @@ import {
   getKeyboardMoveStep,
   type GridDirection,
 } from '../editor/movement/keyboardMoveEngine';
+import { findNextLowerSelectionPlacement } from '../editor/movement/verticalMoveEngine';
 import {
   rotateBrickByWorldQuarterTurn,
   type QuarterTurnDirection,
@@ -86,13 +87,6 @@ export interface DragState {
 
 export type EditorDragState = DragState;
 
-export interface SelectionMarquee {
-  left: number;
-  top: number;
-  width: number;
-  height: number;
-}
-
 export interface GroupCopyState {
   bricks: BrickInstance[];
   connections: Connection[];
@@ -109,7 +103,6 @@ export interface EditorStore {
   selectedId: string | null;
   selectedIds: string[];
   multiSelectMode: boolean;
-  selectionMarquee: SelectionMarquee | null;
   groupCopy: GroupCopyState | null;
   groupMove: GroupMoveState | null;
   past: ProjectSnapshot[];
@@ -129,13 +122,13 @@ export interface EditorStore {
   toggleBrickSelection: (id: string) => void;
   setSelectedBricks: (ids: readonly string[]) => void;
   selectConnectedBricks: () => void;
-  setSelectionMarquee: (marquee: SelectionMarquee | null) => void;
   startGroupCopy: () => boolean;
   startGroupMove: () => boolean;
   updateGroupPlacement: (targetXZ: readonly [number, number]) => void;
   commitGroupPlacement: () => void;
   cancelGroupPlacement: () => void;
   moveSelectionByGridStep: (direction: GridDirection) => boolean;
+  lowerSelectionOneLevel: () => boolean;
   rotateSelected: (direction: RotationDirection) => void;
   flipSelected: (direction: FlipDirection) => void;
   moveSelectedByGridStep: (direction: GridDirection) => boolean;
@@ -341,7 +334,6 @@ export const useEditorStore = create<EditorStore>((set, get) => ({
   selectedId: null,
   selectedIds: [],
   multiSelectMode: false,
-  selectionMarquee: null,
   groupCopy: null,
   groupMove: null,
   past: [],
@@ -380,7 +372,6 @@ export const useEditorStore = create<EditorStore>((set, get) => ({
       selectedId: id,
       selectedIds: id ? [id] : [],
       multiSelectMode: false,
-      selectionMarquee: null,
     });
   },
 
@@ -389,7 +380,6 @@ export const useEditorStore = create<EditorStore>((set, get) => ({
       if (state.drag || state.groupCopy || state.groupMove) return state;
       return {
         multiSelectMode: enabled,
-        selectionMarquee: null,
         selectedIds: enabled
           ? state.selectedIds.length > 0
             ? [...state.selectedIds]
@@ -445,8 +435,6 @@ export const useEditorStore = create<EditorStore>((set, get) => ({
     });
   },
 
-  setSelectionMarquee: (selectionMarquee) => set({ selectionMarquee }),
-
   startGroupCopy: () => {
     const state = get();
     const selectedIds = state.selectedIds.length > 0
@@ -468,7 +456,6 @@ export const useEditorStore = create<EditorStore>((set, get) => ({
     );
     set({
       groupCopy: { bricks: copies, connections: duplicated.connections },
-      selectionMarquee: null,
       toast: '移动整组副本，点击放下',
     });
     return true;
@@ -485,7 +472,6 @@ export const useEditorStore = create<EditorStore>((set, get) => ({
     if (bricks.length === 0) return false;
     set({
       groupMove: { bricks, sourceIds: bricks.map((brick) => brick.id) },
-      selectionMarquee: null,
       toast: '移动整组，点击放下',
     });
     return true;
@@ -594,6 +580,40 @@ export const useEditorStore = create<EditorStore>((set, get) => ({
         selectedId: state.selectedIds.at(-1) ?? null,
         selectedIds: [...state.selectedIds],
         multiSelectMode: true,
+      });
+    });
+    return moved;
+  },
+
+  lowerSelectionOneLevel: () => {
+    let moved = false;
+    set((state) => {
+      if (state.drag || state.groupCopy || state.groupMove || !state.selectedId) return state;
+      const ids = state.selectedIds.length > 0
+        ? [...state.selectedIds]
+        : [state.selectedId];
+      const selectedIds = new Set(ids);
+      const selected = state.bricks.filter((brick) => selectedIds.has(brick.id));
+      if (selected.length === 0) return state;
+      const obstacles = state.bricks.filter((brick) => !selectedIds.has(brick.id));
+      const result = findNextLowerSelectionPlacement(selected, obstacles);
+      if (!result) return { toast: '下面没有能放下的空间了' };
+
+      moved = true;
+      const loweredById = new Map(result.bricks.map((brick) => [brick.id, brick]));
+      const bricks = state.bricks.map((brick) => cloneBrick(loweredById.get(brick.id) ?? brick));
+      const connections = state.connections.filter((connection) => {
+        const aMoved = selectedIds.has(connection.brickA);
+        const bMoved = selectedIds.has(connection.brickB);
+        return aMoved === bMoved;
+      }).map((connection) => ({ ...connection }));
+      return withCommittedProject(state, bricks, connections, {
+        selectedId: state.selectedId,
+        selectedIds: ids,
+        multiSelectMode: state.multiSelectMode,
+        toast: result.descendedLayers === 1
+          ? '向下移动了一层'
+          : `已切换到下方 ${result.descendedLayers} 层的位置`,
       });
     });
     return moved;
@@ -761,7 +781,6 @@ export const useEditorStore = create<EditorStore>((set, get) => ({
           selectedId: null,
           selectedIds: [],
           multiSelectMode: false,
-          selectionMarquee: null,
           groupCopy: null,
           groupMove: null,
           drag: null,
@@ -771,7 +790,6 @@ export const useEditorStore = create<EditorStore>((set, get) => ({
         selectedId: null,
         selectedIds: [],
         multiSelectMode: false,
-        selectionMarquee: null,
         groupCopy: null,
         groupMove: null,
       });
@@ -790,7 +808,6 @@ export const useEditorStore = create<EditorStore>((set, get) => ({
         selectedId: null,
         selectedIds: [],
         multiSelectMode: false,
-        selectionMarquee: null,
         groupCopy: null,
         groupMove: null,
         past: state.past.slice(0, -1),
@@ -812,7 +829,6 @@ export const useEditorStore = create<EditorStore>((set, get) => ({
         selectedId: null,
         selectedIds: [],
         multiSelectMode: false,
-        selectionMarquee: null,
         groupCopy: null,
         groupMove: null,
         past: appendHistory(state.past, snapshotOf(state)),
@@ -865,7 +881,6 @@ export const useEditorStore = create<EditorStore>((set, get) => ({
             selectedId: null,
             selectedIds: [],
             multiSelectMode: false,
-            selectionMarquee: null,
             groupCopy: null,
             groupMove: null,
             toast: '作品文件已打开',
@@ -892,7 +907,6 @@ export const useEditorStore = create<EditorStore>((set, get) => ({
       selectedId: null,
       selectedIds: [],
       multiSelectMode: false,
-      selectionMarquee: null,
       drag: {
         phase: 'dragging',
         source: 'palette',
