@@ -117,6 +117,18 @@ describe('brick catalog', () => {
     });
   });
 
+  it('fills the half-grid gaps on wide wall faces without changing existing connector IDs', () => {
+    const definition = getBrickDefinition('block-2x4');
+    if (!definition) throw new Error('Expected block-2x4 definition.');
+    const leftMagnets = definition.connectors.filter(({ id }) => (
+      id.startsWith('side-left-magnet')
+    ));
+
+    expect(leftMagnets.some(({ id }) => id === 'side-left-magnet-0-0')).toBe(true);
+    expect(leftMagnets.some(({ position }) => position[2] === 0 && position[1] === 2.5)).toBe(true);
+    expect(leftMagnets.some(({ position }) => position[2] === 0 && position[1] === -2.5)).toBe(true);
+  });
+
   it('keeps both broad faces of a thin plate attachable after it is upright', () => {
     const definition = getBrickDefinition('plate-1x2');
     if (!definition) throw new Error('Expected thin plate definition.');

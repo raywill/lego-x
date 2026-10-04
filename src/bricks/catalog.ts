@@ -223,51 +223,47 @@ export function createSideMagnetConnectors(
   columnsZ: number,
 ): ConnectorDefinition[] {
   const verticalRows = Math.max(1, Math.round(size[1] / BRICK_LAYER));
+  const faceColumns = (
+    face: ConnectorFace,
+    columns: number,
+    rows: number,
+    pitchV = BRICK_UNIT,
+    idSuffix = '',
+  ): ConnectorDefinition[] => [
+    ...createConnectorGrid({
+      face,
+      type: 'magnet',
+      size,
+      columns,
+      rows,
+      pitchV,
+      idPrefix: `side-${face}-magnet${idSuffix}`,
+    }),
+    ...(columns > 1 ? createConnectorGrid({
+      face,
+      type: 'magnet',
+      size,
+      columns: columns - 1,
+      rows,
+      pitchV,
+      idPrefix: `side-${face}-magnet-half-grid${idSuffix}`,
+    }) : []),
+  ];
   const centerConnectors = [
-    ...createConnectorGrid({
-      face: 'left',
-      type: 'magnet',
-      size,
-      columns: columnsZ,
-      rows: 1,
-      idPrefix: 'side-left-magnet',
-    }),
-    ...createConnectorGrid({
-      face: 'right',
-      type: 'magnet',
-      size,
-      columns: columnsZ,
-      rows: 1,
-      idPrefix: 'side-right-magnet',
-    }),
-    ...createConnectorGrid({
-      face: 'front',
-      type: 'magnet',
-      size,
-      columns: columnsX,
-      rows: 1,
-      idPrefix: 'side-front-magnet',
-    }),
-    ...createConnectorGrid({
-      face: 'back',
-      type: 'magnet',
-      size,
-      columns: columnsX,
-      rows: 1,
-      idPrefix: 'side-back-magnet',
-    }),
+    ...faceColumns('left', columnsZ, 1),
+    ...faceColumns('right', columnsZ, 1),
+    ...faceColumns('front', columnsX, 1),
+    ...faceColumns('back', columnsX, 1),
   ];
   if (verticalRows === 1) return centerConnectors;
 
-  const layered = (face: ConnectorFace, columns: number) => createConnectorGrid({
+  const layered = (face: ConnectorFace, columns: number) => faceColumns(
     face,
-    type: 'magnet',
-    size,
     columns,
-    rows: verticalRows,
-    pitchV: BRICK_LAYER,
-    idPrefix: `side-${face}-magnet-layer`,
-  });
+    verticalRows,
+    BRICK_LAYER,
+    '-layer',
+  );
   return [
     ...centerConnectors,
     ...layered('left', columnsZ),

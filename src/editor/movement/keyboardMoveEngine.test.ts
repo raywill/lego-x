@@ -94,6 +94,22 @@ describe('view-relative keyboard movement', () => {
     }
   });
 
+  it('climbs a wide even-grid wall whose original side points miss the cube center', () => {
+    const selected = cube('moving', [-5, 5, 0]);
+    const wall: BrickInstance[] = [5, 15, 25].map((y) => ({
+      id: `wide-wall-${y}`,
+      definitionId: 'block-2x4',
+      position: [20, y, 0],
+      rotation: [0, 0, 0],
+    }));
+    const result = computeKeyboardMove(selected, wall, [1, 0]);
+
+    expect(result?.kind).toBe('wall-climb');
+    expect(result?.brick.position).toEqual([-5, 10, 0]);
+    expect(result?.wallConnection?.connectorB).toContain('half-grid');
+    expect(isConnectionValid(result!.wallConnection!, [result!.brick, ...wall])).toBe(true);
+  });
+
   it('lets a triangular piece climb by its planar cap without using its slope', () => {
     const triangle: BrickInstance = {
       id: 'triangle',
