@@ -10,6 +10,13 @@ describe('brick catalog', () => {
     expect(BRICK_DEFINITIONS.every((definition) => definition.connectors.length > 0)).toBe(true);
   });
 
+  it('keeps every connector ID unique inside its brick definition', () => {
+    for (const definition of BRICK_DEFINITIONS) {
+      const ids = definition.connectors.map(({ id }) => id);
+      expect(new Set(ids).size, definition.id).toBe(ids.length);
+    }
+  });
+
   it('provides a compact family of true hollow frames and rounded corners', () => {
     const requested = [
       'frame-square',
@@ -92,7 +99,7 @@ describe('brick catalog', () => {
     const magnets = definition.connectors.filter(
       (connector) => connector.type === 'magnet',
     );
-    expect(magnets).toHaveLength(12);
+    expect(magnets).toHaveLength(28);
     expect(
       magnets.every((connector) => connector.polarity === 'neutral'),
     ).toBe(true);
@@ -168,6 +175,6 @@ describe('brick catalog', () => {
     expect(definition.geometry).toEqual({ kind: 'box', size: [10, 5, 10] });
     expect(definition.connectors.filter(({ type }) => type === 'stud')).toHaveLength(1);
     expect(definition.connectors.filter(({ type }) => type === 'socket')).toHaveLength(1);
-    expect(definition.connectors.filter(({ type }) => type === 'magnet')).toHaveLength(6);
+    expect(definition.connectors.filter(({ type }) => type === 'magnet')).toHaveLength(14);
   });
 });

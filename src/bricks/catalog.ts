@@ -229,6 +229,7 @@ export function createSideMagnetConnectors(
     rows: number,
     pitchV = BRICK_UNIT,
     idSuffix = '',
+    includeCellCenters = false,
   ): ConnectorDefinition[] => [
     ...createConnectorGrid({
       face,
@@ -248,12 +249,22 @@ export function createSideMagnetConnectors(
       pitchV,
       idPrefix: `side-${face}-magnet-half-grid${idSuffix}`,
     }) : []),
+    ...(includeCellCenters ? createConnectorGrid({
+      face,
+      type: 'magnet',
+      size,
+      columns: columns * 2,
+      rows,
+      pitchU: BRICK_LAYER,
+      pitchV,
+      idPrefix: `side-${face}-magnet-cell-center${idSuffix}`,
+    }) : []),
   ];
   const centerConnectors = [
-    ...faceColumns('left', columnsZ, 1),
-    ...faceColumns('right', columnsZ, 1),
-    ...faceColumns('front', columnsX, 1),
-    ...faceColumns('back', columnsX, 1),
+    ...faceColumns('left', columnsZ, 1, BRICK_UNIT, '', verticalRows === 1),
+    ...faceColumns('right', columnsZ, 1, BRICK_UNIT, '', verticalRows === 1),
+    ...faceColumns('front', columnsX, 1, BRICK_UNIT, '', verticalRows === 1),
+    ...faceColumns('back', columnsX, 1, BRICK_UNIT, '', verticalRows === 1),
   ];
   if (verticalRows === 1) return centerConnectors;
 
@@ -263,6 +274,7 @@ export function createSideMagnetConnectors(
     verticalRows,
     BRICK_LAYER,
     '-layer',
+    true,
   );
   return [
     ...centerConnectors,

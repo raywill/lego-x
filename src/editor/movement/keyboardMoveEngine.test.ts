@@ -106,8 +106,38 @@ describe('view-relative keyboard movement', () => {
 
     expect(result?.kind).toBe('wall-climb');
     expect(result?.brick.position).toEqual([-5, 10, 0]);
-    expect(result?.wallConnection?.connectorB).toContain('half-grid');
+    expect(result?.wallConnection?.connectorB).toMatch(/half-grid|cell-center/);
     expect(isConnectionValid(result!.wallConnection!, [result!.brick, ...wall])).toBe(true);
+  });
+
+  it('climbs the narrow side of a large brick with only 5 mm of face overlap', () => {
+    const selected = cube('moving', [-5, 5, 10]);
+    const wall: BrickInstance[] = [5, 15, 25].map((y) => ({
+      id: `narrow-wall-${y}`,
+      definitionId: 'block-2x4',
+      position: [20, y, 0],
+      rotation: [0, 0, 0],
+    }));
+    const result = computeKeyboardMove(selected, wall, [1, 0]);
+
+    expect(result?.kind).toBe('wall-climb');
+    expect(result?.brick.position).toEqual([-5, 10, 10]);
+    expect(result?.wallConnection?.connectorB).toContain('cell-center');
+  });
+
+  it('climbs the wide front face of a large brick with only 5 mm of face overlap', () => {
+    const selected = cube('moving', [20, 5, -15]);
+    const wall: BrickInstance[] = [5, 15, 25].map((y) => ({
+      id: `wide-front-wall-${y}`,
+      definitionId: 'block-2x4',
+      position: [0, y, 0],
+      rotation: [0, 0, 0],
+    }));
+    const result = computeKeyboardMove(selected, wall, [0, 1]);
+
+    expect(result?.kind).toBe('wall-climb');
+    expect(result?.brick.position).toEqual([20, 10, -15]);
+    expect(result?.wallConnection?.connectorB).toContain('cell-center');
   });
 
   it('lets a triangular piece climb by its planar cap without using its slope', () => {
@@ -150,8 +180,9 @@ describe('view-relative keyboard movement', () => {
       new Set([occupiedTarget]),
     );
 
-    expect(result?.kind).not.toBe('wall-climb');
-    expect(result?.wallConnection).toBeNull();
+    expect(result?.kind).toBe('wall-climb');
+    expect(`${result!.wallConnection!.brickB}:${result!.wallConnection!.connectorB}`)
+      .not.toBe(occupiedTarget);
   });
 
   it('does not climb through a low ceiling', () => {
