@@ -161,28 +161,6 @@ describe('editor store', () => {
     expect(bricksOverlap(source, copy)).toBe(false);
   });
 
-  it('selects an entire connected component without crossing into another assembly', () => {
-    const first = useEditorStore.getState().addBrick('cube-1', [5, 5, 5]);
-    const second = useEditorStore.getState().addBrick('cube-1', [5, 15, 5]);
-    const separate = useEditorStore.getState().addBrick('cube-1', [25, 5, 5]);
-    if (!first || !second || !separate) throw new Error('Expected test bricks.');
-    const cubeDefinition = BRICK_DEFINITIONS.find(({ id }) => id === 'cube-1');
-    const stud = cubeDefinition?.connectors.find(({ type }) => type === 'stud');
-    const socket = cubeDefinition?.connectors.find(({ type }) => type === 'socket');
-    if (!stud || !socket) throw new Error('Expected cube connectors.');
-    useEditorStore.setState({
-      connections: [createConnection(first, stud.id, second, socket.id)],
-      selectedId: first,
-      selectedIds: [first],
-    });
-
-    useEditorStore.getState().selectConnectedBricks();
-
-    expect(new Set(useEditorStore.getState().selectedIds)).toEqual(new Set([first, second]));
-    expect(useEditorStore.getState().selectedIds).not.toContain(separate);
-    expect(useEditorStore.getState().multiSelectMode).toBe(true);
-  });
-
   it('copies a selection as one undoable operation and remaps internal connections', () => {
     const first = useEditorStore.getState().addBrick('cube-1', [5, 5, 5]);
     const second = useEditorStore.getState().addBrick('cube-1', [5, 15, 5]);

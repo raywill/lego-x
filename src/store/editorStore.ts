@@ -38,7 +38,6 @@ import {
   type QuarterTurnDirection,
 } from '../editor/rotation/orientationEngine';
 import {
-  collectConnectedBrickIds,
   duplicateBrickGroup,
   getGroupAnchor,
   placeBrickGroup,
@@ -119,8 +118,6 @@ export interface EditorStore {
   selectBrick: (id: string | null) => void;
   setMultiSelectMode: (enabled: boolean) => void;
   toggleBrickSelection: (id: string) => void;
-  setSelectedBricks: (ids: readonly string[]) => void;
-  selectConnectedBricks: () => void;
   startGroupCopy: () => boolean;
   startGroupMove: () => boolean;
   updateGroupPlacement: (targetXZ: readonly [number, number]) => void;
@@ -398,36 +395,6 @@ export const useEditorStore = create<EditorStore>((set, get) => ({
       return {
         selectedIds,
         selectedId: selectedIds.at(-1) ?? null,
-      };
-    });
-  },
-
-  setSelectedBricks: (ids) => {
-    set((state) => {
-      const existing = new Set(state.bricks.map((brick) => brick.id));
-      const selectedIds = [...new Set(ids)].filter((id) => existing.has(id));
-      return {
-        selectedIds,
-        selectedId: selectedIds.at(-1) ?? null,
-      };
-    });
-  },
-
-  selectConnectedBricks: () => {
-    set((state) => {
-      const seeds = state.selectedIds.length > 0
-        ? state.selectedIds
-        : state.selectedId ? [state.selectedId] : [];
-      if (seeds.length === 0) return state;
-      const selectedIds = collectConnectedBrickIds(seeds, state.connections)
-        .filter((id) => state.bricks.some((brick) => brick.id === id));
-      return {
-        selectedIds,
-        selectedId: selectedIds.at(-1) ?? null,
-        multiSelectMode: true,
-        toast: selectedIds.length > seeds.length
-          ? `已选中 ${selectedIds.length} 块相连积木`
-          : '没有找到更多相连积木',
       };
     });
   },

@@ -11,27 +11,6 @@ export interface DuplicatedBrickGroup {
   sourceToCopyId: Map<string, string>;
 }
 
-export function collectConnectedBrickIds(
-  seedIds: readonly string[],
-  connections: readonly Connection[],
-): string[] {
-  const selected = new Set(seedIds);
-  const queue = [...selected];
-  while (queue.length > 0) {
-    const current = queue.shift()!;
-    for (const connection of connections) {
-      let neighbor: string | null = null;
-      if (connection.brickA === current) neighbor = connection.brickB;
-      else if (connection.brickB === current) neighbor = connection.brickA;
-      if (neighbor && !selected.has(neighbor)) {
-        selected.add(neighbor);
-        queue.push(neighbor);
-      }
-    }
-  }
-  return [...selected];
-}
-
 export function duplicateBrickGroup(
   bricks: readonly BrickInstance[],
   connections: readonly Connection[],

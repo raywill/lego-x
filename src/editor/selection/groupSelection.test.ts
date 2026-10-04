@@ -3,7 +3,6 @@ import { describe, expect, it } from 'vitest';
 import type { BrickInstance, Connection } from '../../types/model';
 import { bricksOverlap } from '../collision/collisionEngine';
 import {
-  collectConnectedBrickIds,
   duplicateBrickGroup,
   placeBrickGroup,
 } from './groupSelection';
@@ -23,14 +22,6 @@ const connection = (brickA: string, brickB: string): Connection => ({
 });
 
 describe('group selection helpers', () => {
-  it('walks the undirected connection graph from all selected seeds', () => {
-    const ids = collectConnectedBrickIds(
-      ['b'],
-      [connection('a', 'b'), connection('b', 'c'), connection('far', 'away')],
-    );
-    expect(new Set(ids)).toEqual(new Set(['a', 'b', 'c']));
-  });
-
   it('copies only internal connections and remaps both endpoints', () => {
     let nextId = 0;
     const result = duplicateBrickGroup(

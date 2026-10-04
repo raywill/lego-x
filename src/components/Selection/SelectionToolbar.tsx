@@ -5,7 +5,6 @@ import {
   Check,
   ChevronDown,
   Copy,
-  Link2,
   Move,
   MousePointer2,
   Palette,
@@ -46,7 +45,6 @@ export function SelectionToolbar() {
   const duplicateSelected = useEditorStore((state) => state.duplicateSelected);
   const deleteSelected = useEditorStore((state) => state.deleteSelected);
   const setMultiSelectMode = useEditorStore((state) => state.setMultiSelectMode);
-  const selectConnectedBricks = useEditorStore((state) => state.selectConnectedBricks);
   const startGroupCopy = useEditorStore((state) => state.startGroupCopy);
   const startGroupMove = useEditorStore((state) => state.startGroupMove);
   const cancelGroupPlacement = useEditorStore((state) => state.cancelGroupPlacement);
@@ -87,9 +85,6 @@ export function SelectionToolbar() {
       <div className="selection-toolbar multi-selection-toolbar" role="toolbar" aria-label="多选积木操作">
         <span className="selected-name group-count"><BoxSelect size={17} />已选 {selectedIds.length} 块</span>
         <span className="selection-divider" />
-        <button type="button" onClick={selectConnectedBricks} disabled={selectedIds.length === 0} aria-label="选中所有相连积木">
-          <Link2 size={19} /><span>选相连</span>
-        </button>
         <button type="button" onClick={startGroupMove} disabled={selectedIds.length === 0} aria-label="整体移动选中积木">
           <Move size={19} /><span>整体移动</span>
         </button>
@@ -186,7 +181,6 @@ export function SelectionToolbar() {
         )}
       </div>
       <button type="button" onClick={() => setMultiSelectMode(true)} aria-label="进入多选模式" title="逐个点选多个积木"><BoxSelect size={19} /><span>多选</span></button>
-      <button type="button" onClick={selectConnectedBricks} aria-label="选择所有相连积木" title="选择所有相连积木"><Link2 size={19} /><span>选相连</span></button>
       <button type="button" onClick={() => rotateSelected(-1)} aria-label="向左转 90°" title="向左转 90°"><RotateCcw size={19} /><span>左转</span></button>
       <button type="button" onClick={() => rotateSelected(1)} aria-label="向右转 90°" title="向右转 90°"><RotateCw size={19} /><span>右转</span></button>
       <button type="button" onClick={() => flipSelected('up')} aria-label="朝视图上方翻转 90°" title="朝当前视图上方翻转 90°"><ArrowUp size={19} /><span>上翻</span></button>
