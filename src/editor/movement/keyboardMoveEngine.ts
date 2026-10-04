@@ -1,11 +1,10 @@
 import { Vector3 } from 'three';
 
 import { getBrickDefinition } from '../../bricks/catalog';
-import { BRICK_LAYER, BRICK_UNIT, PLACEMENT_GRID } from '../../config/brickConfig';
+import { BRICK_LAYER, PLACEMENT_GRID } from '../../config/brickConfig';
 import type { BrickInstance, Connection, Vec3Tuple } from '../../types/model';
 import { getCollidingBrickIds, hasBrickCollision } from '../collision/collisionEngine';
 import { computeDropPlacement } from '../gravity/dropEngine';
-import { getBrickBodyBounds, isGridMultiple } from '../grid/gridEngine';
 import {
   areConnectorsCompatible,
   getWorldConnectors,
@@ -120,16 +119,9 @@ export function computeKeyboardMove(
   return null;
 }
 
-/**
- * Upright plates and discs expose a 5 mm horizontal dimension. Move those
- * pieces on the half-grid in every screen direction so children can line them
- * up precisely; regular footprints retain the faster 10 mm step.
- */
-export function getKeyboardMoveStep(selected: BrickInstance): number {
-  const size = getBrickBodyBounds(selected).getSize(new Vector3());
-  const needsHalfGrid = !isGridMultiple(size.x, BRICK_UNIT, 0.02)
-    || !isGridMultiple(size.z, BRICK_UNIT, 0.02);
-  return needsHalfGrid ? PLACEMENT_GRID : BRICK_UNIT;
+/** Every keyboard nudge uses the same half-unit grid, regardless of shape. */
+export function getKeyboardMoveStep(_selected: BrickInstance): number {
+  return PLACEMENT_GRID;
 }
 
 function landMove(

@@ -101,7 +101,7 @@ describe('editor store', () => {
     expect(id).not.toBeNull();
 
     expect(useEditorStore.getState().moveSelectedByGridStep([1, 0])).toBe(true);
-    expect(useEditorStore.getState().bricks[0].position).toEqual([15, 5, 5]);
+    expect(useEditorStore.getState().bricks[0].position).toEqual([10, 5, 5]);
 
     useEditorStore.getState().undo();
     expect(useEditorStore.getState().bricks[0].position).toEqual([5, 5, 5]);
@@ -148,7 +148,7 @@ describe('editor store', () => {
 
     expect(useEditorStore.getState().moveSelectedByGridStep([-1, 0])).toBe(true);
     const state = useEditorStore.getState();
-    expect(state.bricks.find(({ id }) => id === 'moving')?.position).toEqual([-5, 5, 5]);
+    expect(state.bricks.find(({ id }) => id === 'moving')?.position).toEqual([0, 5, 5]);
     expect(state.connections).toEqual([]);
   });
 
@@ -255,7 +255,7 @@ describe('editor store', () => {
 
     expect(useEditorStore.getState().moveSelectionByGridStep([0, 1])).toBe(true);
     const moved = useEditorStore.getState().bricks;
-    expect(moved.map(({ position }) => position)).toEqual([[5, 5, 15], [15, 5, 15]]);
+    expect(moved.map(({ position }) => position)).toEqual([[5, 5, 10], [15, 5, 10]]);
     expect(moved[1].position[0] - moved[0].position[0]).toBe(10);
 
     useEditorStore.getState().undo();

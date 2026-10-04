@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
+import { BRICK_DEFINITIONS } from '../../bricks/catalog';
 import type { BrickInstance } from '../../types/model';
 import { isConnectionValid } from '../projectModel';
 import {
@@ -40,7 +41,7 @@ describe('view-relative keyboard movement', () => {
     const selected = cube('moving', [5, 25, 5]);
     const result = computeKeyboardMove(selected, [cube('low-support', [15, 5, 5])], [1, 0]);
 
-    expect(result?.brick.position).toEqual([15, 15, 5]);
+    expect(result?.brick.position).toEqual([10, 15, 5]);
     expect(result?.fellLayers).toBe(2);
   });
 
@@ -61,10 +62,13 @@ describe('view-relative keyboard movement', () => {
     expect(movedForward?.slice(1)).toEqual([10, 10]);
   });
 
-  it('keeps the normal one-cell step for a full-size block', () => {
+  it('uses the same 5 mm keyboard step for every brick shape', () => {
     const selected = cube('regular', [5, 5, 5]);
-    expect(getKeyboardMoveStep(selected)).toBe(10);
-    expect(computeKeyboardMove(selected, [], [1, 0])?.brick.position).toEqual([15, 5, 5]);
+    for (const definition of BRICK_DEFINITIONS) {
+      expect(getKeyboardMoveStep({ ...selected, definitionId: definition.id }), definition.id)
+        .toBe(5);
+    }
+    expect(computeKeyboardMove(selected, [], [1, 0])?.brick.position).toEqual([10, 5, 5]);
   });
 
   it('climbs one half-layer up a compatible wall without moving through it', () => {
@@ -163,7 +167,7 @@ describe('view-relative keyboard movement', () => {
 
     expect(first?.kind).toBe('wall-climb');
     expect(second?.kind).toBe('obstacle-climb');
-    expect(second?.brick.position).toEqual([15, 15, 5]);
+    expect(second?.brick.position).toEqual([10, 15, 5]);
     expect(second?.wallConnection).toBeNull();
   });
 
