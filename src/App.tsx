@@ -169,7 +169,9 @@ function SelectionOverlay() {
   if (groupCopy || groupMove || dragging || !selectedId) return null;
   return (
     <div className="multi-select-hint">
-      {multiSelectMode ? '逐个点击积木来选择或取消 · 按空格可以下移' : '按空格可以下移'}
+      {multiSelectMode
+        ? '逐个点击积木来选择或取消 · 按空格可以下移'
+        : '方向键移动 · 顶住墙继续按可以上移 · 空格下移'}
     </div>
   );
 }

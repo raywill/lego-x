@@ -30,6 +30,7 @@ import { getBrickBodyBounds, snapBrickToGrid } from '../editor/grid/gridEngine';
 import {
   computeKeyboardMove,
   getKeyboardMoveStep,
+  MAX_AUTO_CLIMB_LAYERS,
   type GridDirection,
 } from '../editor/movement/keyboardMoveEngine';
 import { findNextLowerSelectionPlacement } from '../editor/movement/verticalMoveEngine';
@@ -240,6 +241,19 @@ const connectionKey = (connection: Connection): string => {
   const left = `${connection.brickA}\u0000${connection.connectorA}`;
   const right = `${connection.brickB}\u0000${connection.connectorB}`;
   return left < right ? `${left}\u0001${right}` : `${right}\u0001${left}`;
+};
+
+const occupiedConnectorKeysExcludingBrick = (
+  connections: readonly Connection[],
+  brickId: string,
+): Set<string> => {
+  const keys = new Set<string>();
+  for (const connection of connections) {
+    if (connection.brickA === brickId || connection.brickB === brickId) continue;
+    keys.add(`${connection.brickA}:${connection.connectorA}`);
+    keys.add(`${connection.brickB}:${connection.connectorB}`);
+  }
+  return keys;
 };
 
 const isAxisAlignedNormal = (normal: readonly number[]): boolean =>
@@ -645,21 +659,36 @@ export const useEditorStore = create<EditorStore>((set, get) => ({
       if (state.drag || !state.selectedId) return state;
       const selected = state.bricks.find((brick) => brick.id === state.selectedId);
       if (!selected) return state;
-      const result = computeKeyboardMove(selected, state.bricks, direction);
+      const result = computeKeyboardMove(
+        selected,
+        state.bricks,
+        direction,
+        MAX_AUTO_CLIMB_LAYERS,
+        occupiedConnectorKeysExcludingBrick(state.connections, selected.id),
+      );
       if (!result) return { toast: '这个方向被挡住了，积木过不去' };
-      moved = true;
       const bricks = state.bricks.map((brick) =>
         brick.id === selected.id ? cloneBrick(result.brick) : cloneBrick(brick));
+      const connections = removeConnectionsForBrick(state.connections, selected.id);
+      if (result.wallConnection) {
+        if (!validConnection(result.wallConnection, bricks, selected.id, connections)) {
+          return { toast: '墙面连接点已经被占用了' };
+        }
+        connections.push({ ...result.wallConnection });
+      }
+      moved = true;
       return withCommittedProject(
         state,
         bricks,
-        removeConnectionsForBrick(state.connections, selected.id),
+        connections,
         {
           selectedId: selected.id,
           selectedIds: [selected.id],
-          toast: result.climbedLayers > 0
-            ? `自动向上跨了 ${result.climbedLayers} 层`
-            : null,
+          toast: result.kind === 'wall-climb'
+            ? '贴着墙向上移动了一层'
+            : result.climbedLayers > 0
+              ? `自动向上跨了 ${result.climbedLayers} 层`
+              : null,
         },
       );
     });

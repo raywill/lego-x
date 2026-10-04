@@ -1,10 +1,16 @@
 import { Vector3 } from 'three';
 
+import { getBrickDefinition } from '../../bricks/catalog';
 import { BRICK_LAYER, BRICK_UNIT, PLACEMENT_GRID } from '../../config/brickConfig';
-import type { BrickInstance, Vec3Tuple } from '../../types/model';
-import { hasBrickCollision } from '../collision/collisionEngine';
+import type { BrickInstance, Connection, Vec3Tuple } from '../../types/model';
+import { getCollidingBrickIds, hasBrickCollision } from '../collision/collisionEngine';
 import { computeDropPlacement } from '../gravity/dropEngine';
 import { getBrickBodyBounds, isGridMultiple } from '../grid/gridEngine';
+import {
+  areConnectorsCompatible,
+  getWorldConnectors,
+  type WorldConnector,
+} from '../snapping/snapEngine';
 
 export type GridDirection = readonly [x: -1 | 0 | 1, z: -1 | 0 | 1];
 
@@ -13,6 +19,8 @@ export interface KeyboardMoveResult {
   climbedLayers: number;
   fellLayers: number;
   waypoints: Vec3Tuple[];
+  kind: 'horizontal' | 'obstacle-climb' | 'wall-climb';
+  wallConnection: Connection | null;
 }
 
 export interface ViewGridAxes {
@@ -60,6 +68,7 @@ export function computeKeyboardMove(
   others: readonly BrickInstance[],
   direction: GridDirection,
   maxClimbLayers = MAX_AUTO_CLIMB_LAYERS,
+  occupiedConnectorKeys: ReadonlySet<string> = new Set<string>(),
 ): KeyboardMoveResult | null {
   if (Math.abs(direction[0]) + Math.abs(direction[1]) !== 1) {
     throw new RangeError('Keyboard movement requires one cardinal grid direction.');
@@ -77,8 +86,18 @@ export function computeKeyboardMove(
   ]);
 
   if (!hasBrickCollision(destinationAtCurrentHeight, scene)) {
-    return landMove(selected, destinationAtCurrentHeight, scene, 0, []);
+    return landMove(selected, destinationAtCurrentHeight, scene, 0, [], 'horizontal');
   }
+
+  const blockingIds = new Set(getCollidingBrickIds(destinationAtCurrentHeight, scene));
+  const wallClimb = findWallClimb(
+    selected,
+    scene,
+    direction,
+    blockingIds,
+    occupiedConnectorKeys,
+  );
+  if (wallClimb) return wallClimb;
 
   for (let layers = 1; layers <= maxClimbLayers; layers += 1) {
     const lift = layers * BRICK_LAYER;
@@ -94,6 +113,7 @@ export function computeKeyboardMove(
       scene,
       layers,
       [[...liftedSource.position]],
+      'obstacle-climb',
     );
   }
 
@@ -118,6 +138,7 @@ function landMove(
   scene: readonly BrickInstance[],
   climbedLayers: number,
   leadingWaypoints: Vec3Tuple[],
+  kind: 'horizontal' | 'obstacle-climb',
 ): KeyboardMoveResult | null {
   const drop = computeDropPlacement(heldDestination, scene);
   const landed: BrickInstance = {
@@ -136,7 +157,105 @@ function landMove(
   if (waypoints.length === 0 || !samePosition(waypoints.at(-1)!, landed.position)) {
     waypoints.push([...landed.position]);
   }
-  return { brick: landed, climbedLayers, fellLayers, waypoints };
+  return {
+    brick: landed,
+    climbedLayers,
+    fellLayers,
+    waypoints,
+    kind,
+    wallConnection: null,
+  };
+}
+
+/**
+ * When a horizontal keyboard step runs into an orthogonal wall, keep the
+ * child's chosen orientation and advance one 5 mm layer up the wall instead.
+ * A real, explicit magnet pair must exist at the new height: the movement is
+ * therefore a connector operation rather than generic surface adhesion.
+ */
+function findWallClimb(
+  selected: BrickInstance,
+  scene: readonly BrickInstance[],
+  direction: GridDirection,
+  blockingIds: ReadonlySet<string>,
+  occupiedConnectorKeys: ReadonlySet<string>,
+): KeyboardMoveResult | null {
+  const lifted = translated(selected, [0, BRICK_LAYER, 0]);
+  if (!verticalPathIsClear(selected, lifted, scene)) return null;
+
+  const connection = findAlignedWallConnection(
+    lifted,
+    scene.filter((brick) => blockingIds.has(brick.id)),
+    direction,
+    occupiedConnectorKeys,
+  );
+  if (!connection) return null;
+
+  return {
+    brick: lifted,
+    climbedLayers: 1,
+    fellLayers: 0,
+    waypoints: [[...lifted.position]],
+    kind: 'wall-climb',
+    wallConnection: connection,
+  };
+}
+
+function findAlignedWallConnection(
+  selected: BrickInstance,
+  blockers: readonly BrickInstance[],
+  direction: GridDirection,
+  occupiedConnectorKeys: ReadonlySet<string>,
+): Connection | null {
+  const selectedDefinition = getBrickDefinition(selected.definitionId);
+  if (!selectedDefinition) return null;
+  const sources = getWorldConnectors(selected, selectedDefinition)
+    .filter((connector) => connector.connector.type === 'magnet');
+  const targets = blockers.flatMap((brick) => {
+    const definition = getBrickDefinition(brick.definitionId);
+    return definition ? getWorldConnectors(brick, definition) : [];
+  }).filter((connector) => connector.connector.type === 'magnet');
+  const directionVector = new Vector3(direction[0], 0, direction[1]);
+
+  const pairs = sources.flatMap((source) => targets.map((target) => ({ source, target })));
+  pairs.sort((first, second) => wallPairKey(first.source, first.target)
+    .localeCompare(wallPairKey(second.source, second.target)));
+
+  for (const { source, target } of pairs) {
+    if (
+      occupiedConnectorKeys.has(connectorKey(source))
+      || occupiedConnectorKeys.has(connectorKey(target))
+      || !areConnectorsCompatible(source.connector, target.connector)
+    ) continue;
+
+    const sourceNormal = new Vector3(...source.normal);
+    const targetNormal = new Vector3(...target.normal);
+    if (
+      Math.abs(sourceNormal.y) > 1e-5
+      || Math.abs(targetNormal.y) > 1e-5
+      || sourceNormal.dot(directionVector) < 0.98
+      || targetNormal.dot(directionVector) > -0.98
+      || sourceNormal.dot(targetNormal) > -0.98
+      || new Vector3(...source.position).distanceTo(new Vector3(...target.position)) > 0.75
+    ) continue;
+
+    return {
+      brickA: selected.id,
+      connectorA: source.connectorId,
+      brickB: target.brickId,
+      connectorB: target.connectorId,
+    };
+  }
+
+  return null;
+}
+
+function connectorKey(connector: WorldConnector): string {
+  return `${connector.brickId}:${connector.connectorId}`;
+}
+
+function wallPairKey(source: WorldConnector, target: WorldConnector): string {
+  return `${source.connectorId}:${target.brickId}:${target.connectorId}`;
 }
 
 function verticalPathIsClear(

@@ -4,7 +4,11 @@ import { ROTATION_STEP } from '../config/brickConfig';
 import { computeDropPlacement } from '../editor/gravity/dropEngine';
 import { bricksOverlap } from '../editor/collision/collisionEngine';
 import { getBrickBodyBounds, isBrickOnGrid } from '../editor/grid/gridEngine';
-import { createConnection, serializeProject } from '../editor/projectModel';
+import {
+  createConnection,
+  isConnectionValid,
+  serializeProject,
+} from '../editor/projectModel';
 import { useEditorStore } from './editorStore';
 
 const definition = BRICK_DEFINITIONS.find((item) => item.connectors.length > 0);
@@ -101,6 +105,51 @@ describe('editor store', () => {
 
     useEditorStore.getState().undo();
     expect(useEditorStore.getState().bricks[0].position).toEqual([5, 5, 5]);
+  });
+
+  it('climbs a wall, commits its logical connection, and restores both on undo', () => {
+    useEditorStore.setState({
+      bricks: [
+        { id: 'moving', definitionId: 'cube-1', position: [5, 5, 5], rotation: [0, 0, 0] },
+        { id: 'wall', definitionId: 'cube-1', position: [15, 5, 5], rotation: [0, 0, 0] },
+      ],
+      selectedId: 'moving',
+      selectedIds: ['moving'],
+    });
+
+    expect(useEditorStore.getState().moveSelectedByGridStep([1, 0])).toBe(true);
+    let state = useEditorStore.getState();
+    expect(state.bricks.find(({ id }) => id === 'moving')?.position).toEqual([5, 10, 5]);
+    expect(state.connections).toHaveLength(1);
+    expect(isConnectionValid(state.connections[0], state.bricks)).toBe(true);
+    expect(state.toast).toContain('贴着墙');
+
+    state.undo();
+    state = useEditorStore.getState();
+    expect(state.bricks.find(({ id }) => id === 'moving')?.position).toEqual([5, 5, 5]);
+    expect(state.connections).toEqual([]);
+
+    state.redo();
+    state = useEditorStore.getState();
+    expect(state.bricks.find(({ id }) => id === 'moving')?.position).toEqual([5, 10, 5]);
+    expect(state.connections).toHaveLength(1);
+  });
+
+  it('detaches from a wall and falls when moved away from it', () => {
+    useEditorStore.setState({
+      bricks: [
+        { id: 'moving', definitionId: 'cube-1', position: [5, 5, 5], rotation: [0, 0, 0] },
+        { id: 'wall', definitionId: 'cube-1', position: [15, 5, 5], rotation: [0, 0, 0] },
+      ],
+      selectedId: 'moving',
+      selectedIds: ['moving'],
+    });
+    useEditorStore.getState().moveSelectedByGridStep([1, 0]);
+
+    expect(useEditorStore.getState().moveSelectedByGridStep([-1, 0])).toBe(true);
+    const state = useEditorStore.getState();
+    expect(state.bricks.find(({ id }) => id === 'moving')?.position).toEqual([-5, 5, 5]);
+    expect(state.connections).toEqual([]);
   });
 
   it('moves a plate by half a cell after flipping it upright', () => {

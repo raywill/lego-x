@@ -129,6 +129,25 @@ describe('brick catalog', () => {
     expect(faceMagnets.every(({ position }) => Math.abs(position[1]) === 2.5)).toBe(true);
   });
 
+  it.each([
+    'triangle-prism',
+    'right-triangle-prism',
+    'wedge',
+    'roof-wedge',
+    'trapezoid-prism',
+  ])('gives %s orthogonal end-face magnets without making its slope magnetic', (definitionId) => {
+    const definition = getBrickDefinition(definitionId);
+    if (!definition) throw new Error(`Expected ${definitionId}.`);
+    const wallMagnets = definition.connectors.filter(({ id }) => id.endsWith('wall-magnet'));
+
+    expect(wallMagnets.map(({ id }) => id).sort()).toEqual([
+      'back-wall-magnet',
+      'front-wall-magnet',
+    ]);
+    expect(wallMagnets.every(({ position }) => Math.abs(position[2]) === definition.size[2] / 2))
+      .toBe(true);
+  });
+
   it('provides a one-by-one half-height plate with generic face connections', () => {
     const definition = getBrickDefinition('plate-1x1');
     if (!definition) throw new Error('Expected one-by-one thin plate definition.');

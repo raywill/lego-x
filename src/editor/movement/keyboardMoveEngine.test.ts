@@ -1,10 +1,12 @@
 import { describe, expect, it } from 'vitest';
 
 import type { BrickInstance } from '../../types/model';
+import { isConnectionValid } from '../projectModel';
 import {
   computeKeyboardMove,
   directionForArrow,
   getKeyboardMoveStep,
+  MAX_AUTO_CLIMB_LAYERS,
   resolveViewGridAxes,
 } from './keyboardMoveEngine';
 
@@ -65,20 +67,75 @@ describe('view-relative keyboard movement', () => {
     expect(computeKeyboardMove(selected, [], [1, 0])?.brick.position).toEqual([15, 5, 5]);
   });
 
-  it('climbs the minimum number of layers to cross a one-brick obstacle', () => {
+  it('climbs one half-layer up a compatible wall without moving through it', () => {
     const selected = cube('moving', [5, 5, 5]);
-    const result = computeKeyboardMove(selected, [cube('step', [15, 5, 5])], [1, 0]);
+    const wall = cube('wall', [15, 5, 5]);
+    const result = computeKeyboardMove(selected, [wall], [1, 0]);
 
-    expect(result?.brick.position).toEqual([15, 15, 5]);
-    expect(result?.climbedLayers).toBe(2);
+    expect(result?.brick.position).toEqual([5, 10, 5]);
+    expect(result?.brick.rotation).toEqual(selected.rotation);
+    expect(result?.climbedLayers).toBe(1);
     expect(result?.fellLayers).toBe(0);
+    expect(result?.kind).toBe('wall-climb');
+    expect(result?.wallConnection).not.toBeNull();
+    expect(isConnectionValid(result!.wallConnection!, [result!.brick, wall])).toBe(true);
   });
 
-  it('stays put when the obstacle is higher than the auto-climb limit', () => {
-    const selected = cube('moving', [5, 5, 5]);
+  it('moves repeatedly up a tall wall in half-layer steps', () => {
     const wall = [5, 15, 25].map((y) => cube(`wall-${y}`, [15, y, 5]));
+    let selected = cube('moving', [5, 5, 5]);
 
-    expect(computeKeyboardMove(selected, wall, [1, 0])).toBeNull();
+    for (const expectedY of [10, 15, 20, 25]) {
+      const result = computeKeyboardMove(selected, wall, [1, 0]);
+      expect(result?.kind).toBe('wall-climb');
+      expect(result?.brick.position).toEqual([5, expectedY, 5]);
+      expect(result?.wallConnection).not.toBeNull();
+      selected = result!.brick;
+    }
+  });
+
+  it('lets a triangular piece climb by its planar cap without using its slope', () => {
+    const triangle: BrickInstance = {
+      id: 'triangle',
+      definitionId: 'triangle-prism',
+      position: [0, 10, 0],
+      rotation: [0, 0, 0],
+    };
+    const wall = [5, 15, 25].map((y) => cube(`wall-${y}`, [0, y, 10]));
+    const result = computeKeyboardMove(triangle, wall, [0, 1]);
+
+    expect(result?.kind).toBe('wall-climb');
+    expect(result?.brick.position).toEqual([0, 15, 0]);
+    expect(result?.brick.rotation).toEqual([0, 0, 0]);
+    expect(result?.wallConnection?.connectorA).toBe('front-wall-magnet');
+  });
+
+  it('crosses onto the top only after climbing beyond the wall face', () => {
+    const wall = cube('wall', [15, 5, 5]);
+    const first = computeKeyboardMove(cube('moving', [5, 5, 5]), [wall], [1, 0]);
+    const second = computeKeyboardMove(first!.brick, [wall], [1, 0]);
+
+    expect(first?.kind).toBe('wall-climb');
+    expect(second?.kind).toBe('obstacle-climb');
+    expect(second?.brick.position).toEqual([15, 15, 5]);
+    expect(second?.wallConnection).toBeNull();
+  });
+
+  it('does not reuse a wall connector that another connection already occupies', () => {
+    const selected = cube('moving', [5, 5, 5]);
+    const wall = cube('wall', [15, 5, 5]);
+    const available = computeKeyboardMove(selected, [wall], [1, 0]);
+    const occupiedTarget = `${available!.wallConnection!.brickB}:${available!.wallConnection!.connectorB}`;
+    const result = computeKeyboardMove(
+      selected,
+      [wall],
+      [1, 0],
+      MAX_AUTO_CLIMB_LAYERS,
+      new Set([occupiedTarget]),
+    );
+
+    expect(result?.kind).not.toBe('wall-climb');
+    expect(result?.wallConnection).toBeNull();
   });
 
   it('does not climb through a low ceiling', () => {

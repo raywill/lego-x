@@ -347,6 +347,20 @@ function slopeConnector(
   return createOrientedConnector(id, 'stud', position, normal);
 }
 
+/**
+ * A prism's front and back caps are planar even when its profile is sloped.
+ * Keep the logical wall contact in the lower, solid portion of that cap so a
+ * child can climb a triangle or wedge up an orthogonal wall without making
+ * the sloped surface itself snappable again.
+ */
+function createPrismWallMagnets(size: Vec3Tuple): ConnectorDefinition[] {
+  const contactY = -Math.min(BRICK_LAYER / 2, size[1] / 4);
+  return [
+    createFaceConnector('front-wall-magnet', 'magnet', 'front', size, 0, contactY),
+    createFaceConnector('back-wall-magnet', 'magnet', 'back', size, 0, contactY),
+  ];
+}
+
 function annulusSurfaceConnectors(size: Vec3Tuple): ConnectorDefinition[] {
   const radialOffset = BRICK_UNIT * 0.6;
   const points: Array<[number, number]> = [
@@ -832,7 +846,11 @@ export const BRICK_DEFINITIONS: BrickDefinition[] = [
     size: triangleSize,
     color: '#42bfc5',
     geometry: { kind: 'triangularPrism', size: triangleSize, symmetric: true },
-    connectors: [...bottomGrid(triangleSize, 2, 1), ...symmetricTriangleSlopes],
+    connectors: [
+      ...bottomGrid(triangleSize, 2, 1),
+      ...symmetricTriangleSlopes,
+      ...createPrismWallMagnets(triangleSize),
+    ],
   },
   {
     id: 'right-triangle-prism',
@@ -845,6 +863,7 @@ export const BRICK_DEFINITIONS: BrickDefinition[] = [
     connectors: [
       ...bottomGrid(triangleSize, 2, 1),
       slopeConnector('slope-stud', [0, 0, 0], [1, 1, 0]),
+      ...createPrismWallMagnets(triangleSize),
     ],
   },
   {
@@ -859,6 +878,7 @@ export const BRICK_DEFINITIONS: BrickDefinition[] = [
       ...bottomGrid(wedgeSize, 3, 2),
       slopeConnector('slope-stud-0', [-U * 0.75, U * 0.25, 0], [1, 3, 0]),
       slopeConnector('slope-stud-1', [U * 0.75, -U * 0.25, 0], [1, 3, 0]),
+      ...createPrismWallMagnets(wedgeSize),
     ],
   },
   {
@@ -869,7 +889,11 @@ export const BRICK_DEFINITIONS: BrickDefinition[] = [
     size: roofSize,
     color: '#9a71dc',
     geometry: { kind: 'doubleWedge', size: roofSize },
-    connectors: [...bottomGrid(roofSize, 4, 2), ...roofSlopeStuds],
+    connectors: [
+      ...bottomGrid(roofSize, 4, 2),
+      ...roofSlopeStuds,
+      ...createPrismWallMagnets(roofSize),
+    ],
   },
   {
     id: 'trapezoid-prism',
@@ -888,6 +912,7 @@ export const BRICK_DEFINITIONS: BrickDefinition[] = [
         columns: 1,
         rows: 2,
       }),
+      ...createPrismWallMagnets(trapezoidSize),
     ],
   },
   {
