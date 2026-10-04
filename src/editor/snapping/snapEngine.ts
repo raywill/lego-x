@@ -190,7 +190,10 @@ export function findBestSnap({
   let best: SnapCandidate | null = null;
 
   for (const source of sources) {
-    if (occupiedConnectorKeys.has(connectorKey(source.brickId, source.connectorId))) {
+    if (
+      !isActiveSnapConnector(source)
+      || occupiedConnectorKeys.has(connectorKey(source.brickId, source.connectorId))
+    ) {
       continue;
     }
 
@@ -200,6 +203,7 @@ export function findBestSnap({
     for (const target of targets) {
       if (
         target.brickId === dragged.id ||
+        !isActiveSnapConnector(target) ||
         occupiedConnectorKeys.has(connectorKey(target.brickId, target.connectorId)) ||
         !areConnectorsCompatible(source.connector, target.connector)
       ) {
@@ -340,6 +344,8 @@ function collectAlignedContacts(
     const targetKey = connectorKey(target.brickId, target.connectorId);
     if (
       target.brickId === dragged.id
+      || !isActiveSnapConnector(source)
+      || !isActiveSnapConnector(target)
       || occupiedConnectorKeys.has(sourceKey)
       || occupiedConnectorKeys.has(targetKey)
       || usedSources.has(sourceKey)
@@ -376,6 +382,15 @@ function collectAlignedContacts(
   }
 
   return contacts;
+}
+
+/**
+ * Magnets describe wall contacts. When their face is horizontal, the normal
+ * stud/socket grid remains the only stacking affordance; after a flip makes
+ * the face vertical, the same hidden magnets become eligible for snapping.
+ */
+function isActiveSnapConnector(connector: WorldConnector): boolean {
+  return connector.connector.type !== 'magnet' || Math.abs(connector.normal[1]) < 0.98;
 }
 
 function findMatingOrientation(
@@ -480,5 +495,6 @@ function quaternionToEulerTuple(
 }
 
 function cleanNearZero(value: number, epsilon: number): number {
-  return Math.abs(value) <= epsilon ? 0 : value;
+  const cleaned = Math.round(value * 1e12) / 1e12;
+  return Math.abs(cleaned) <= epsilon ? 0 : cleaned;
 }

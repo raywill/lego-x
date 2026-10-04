@@ -97,7 +97,7 @@ describe('brick catalog', () => {
     if (!definition) throw new Error('Expected cube definition.');
 
     const magnets = definition.connectors.filter(
-      (connector) => connector.type === 'magnet',
+      (connector) => connector.type === 'magnet' && connector.id.startsWith('side-'),
     );
     expect(magnets).toHaveLength(28);
     expect(
@@ -144,9 +144,24 @@ describe('brick catalog', () => {
       && (id.startsWith('plate-top-magnet') || id.startsWith('plate-bottom-magnet'))
     ));
 
-    expect(faceMagnets).toHaveLength(4);
+    expect(faceMagnets).toHaveLength(20);
     expect(faceMagnets.every(({ position }) => Math.abs(position[1]) === 2.5)).toBe(true);
   });
+
+  it.each(['cube-1', 'block-1x2', 'block-2x2', 'block-2x4', 'beam-long'])(
+    'keeps the broad top and bottom faces of %s magnetic after a flip',
+    (definitionId) => {
+      const definition = getBrickDefinition(definitionId);
+      if (!definition) throw new Error(`Expected ${definitionId}.`);
+      const broadMagnets = definition.connectors.filter(({ id, type }) => (
+        type === 'magnet' && id.startsWith('broad-')
+      ));
+
+      expect(broadMagnets.some(({ id }) => id.startsWith('broad-top-magnet'))).toBe(true);
+      expect(broadMagnets.some(({ id }) => id.startsWith('broad-bottom-magnet'))).toBe(true);
+      expect(broadMagnets.some(({ id }) => id.includes('cell-center'))).toBe(true);
+    },
+  );
 
   it.each([
     'triangle-prism',
@@ -175,6 +190,6 @@ describe('brick catalog', () => {
     expect(definition.geometry).toEqual({ kind: 'box', size: [10, 5, 10] });
     expect(definition.connectors.filter(({ type }) => type === 'stud')).toHaveLength(1);
     expect(definition.connectors.filter(({ type }) => type === 'socket')).toHaveLength(1);
-    expect(definition.connectors.filter(({ type }) => type === 'magnet')).toHaveLength(14);
+    expect(definition.connectors.filter(({ type }) => type === 'magnet')).toHaveLength(22);
   });
 });

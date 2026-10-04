@@ -144,6 +144,22 @@ describe('view-relative keyboard movement', () => {
     expect(result?.wallConnection?.connectorB).toContain('cell-center');
   });
 
+  it('climbs the 2x4 broad face after the large brick is flipped upright', () => {
+    const selected = cube('moving', [0, 5, 10]);
+    const wall: BrickInstance = {
+      id: 'upright-wide-wall',
+      definitionId: 'block-2x4',
+      position: [0, 10, 0],
+      rotation: [Math.PI / 2, 0, 0],
+    };
+    const result = computeKeyboardMove(selected, [wall], [0, -1]);
+
+    expect(result?.kind).toBe('wall-climb');
+    expect(result?.brick.position).toEqual([0, 10, 10]);
+    expect(result?.wallConnection?.connectorB).toContain('broad-top-magnet');
+    expect(isConnectionValid(result!.wallConnection!, [result!.brick, wall])).toBe(true);
+  });
+
   it('lets a triangular piece climb by its planar cap without using its slope', () => {
     const triangle: BrickInstance = {
       id: 'triangle',

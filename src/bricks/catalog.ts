@@ -286,32 +286,39 @@ export function createSideMagnetConnectors(
 }
 
 /**
- * Logical-only broad-face contacts for thin plates. Once a 5 mm plate is
- * upright, its former top/bottom faces become walls; magnets keep those walls
- * attachable without rotating the approaching brick.
+ * Logical-only contacts for a box's broad top and bottom faces. The original
+ * stud/socket grid remains the stacking affordance; these hidden magnets only
+ * make the same faces usable as orthogonal walls after the brick is flipped.
  */
-function createPlateFaceMagnets(
+function createBroadFaceMagnets(
   size: Vec3Tuple,
   columnsX: number,
   columnsZ: number,
+  idPrefix: 'broad' | 'plate',
 ): ConnectorDefinition[] {
+  const faceMagnets = (face: 'top' | 'bottom') => [
+    ...createConnectorGrid({
+      face,
+      type: 'magnet',
+      size,
+      columns: columnsX,
+      rows: columnsZ,
+      idPrefix: `${idPrefix}-${face}-magnet`,
+    }),
+    ...createConnectorGrid({
+      face,
+      type: 'magnet',
+      size,
+      columns: columnsX * 2,
+      rows: columnsZ * 2,
+      pitchU: BRICK_LAYER,
+      pitchV: BRICK_LAYER,
+      idPrefix: `${idPrefix}-${face}-magnet-cell-center`,
+    }),
+  ];
   return [
-    ...createConnectorGrid({
-      face: 'top',
-      type: 'magnet',
-      size,
-      columns: columnsX,
-      rows: columnsZ,
-      idPrefix: 'plate-top-magnet',
-    }),
-    ...createConnectorGrid({
-      face: 'bottom',
-      type: 'magnet',
-      size,
-      columns: columnsX,
-      rows: columnsZ,
-      idPrefix: 'plate-bottom-magnet',
-    }),
+    ...faceMagnets('top'),
+    ...faceMagnets('bottom'),
   ];
 }
 
@@ -666,6 +673,7 @@ export const BRICK_DEFINITIONS: BrickDefinition[] = [
     connectors: [
       ...createTopBottomGrid(cubeSize, 1, 1),
       ...createSideMagnetConnectors(cubeSize, 1, 1),
+      ...createBroadFaceMagnets(cubeSize, 1, 1, 'broad'),
     ],
   },
   {
@@ -679,6 +687,7 @@ export const BRICK_DEFINITIONS: BrickDefinition[] = [
     connectors: [
       ...createTopBottomGrid(block1x2Size, 2, 1),
       ...createSideMagnetConnectors(block1x2Size, 2, 1),
+      ...createBroadFaceMagnets(block1x2Size, 2, 1, 'broad'),
     ],
   },
   {
@@ -692,6 +701,7 @@ export const BRICK_DEFINITIONS: BrickDefinition[] = [
     connectors: [
       ...createTopBottomGrid(block2x2Size, 2, 2),
       ...createSideMagnetConnectors(block2x2Size, 2, 2),
+      ...createBroadFaceMagnets(block2x2Size, 2, 2, 'broad'),
     ],
   },
   {
@@ -705,6 +715,7 @@ export const BRICK_DEFINITIONS: BrickDefinition[] = [
     connectors: [
       ...createTopBottomGrid(block2x4Size, 4, 2),
       ...createSideMagnetConnectors(block2x4Size, 4, 2),
+      ...createBroadFaceMagnets(block2x4Size, 4, 2, 'broad'),
     ],
   },
   {
@@ -718,6 +729,7 @@ export const BRICK_DEFINITIONS: BrickDefinition[] = [
     connectors: [
       ...createTopBottomGrid(beamSize, 6, 1),
       ...createSideMagnetConnectors(beamSize, 6, 1),
+      ...createBroadFaceMagnets(beamSize, 6, 1, 'broad'),
       ...beamSideHoles,
     ],
   },
@@ -732,7 +744,7 @@ export const BRICK_DEFINITIONS: BrickDefinition[] = [
     connectors: [
       ...createTopBottomGrid(plate1x1Size, 1, 1),
       ...createSideMagnetConnectors(plate1x1Size, 1, 1),
-      ...createPlateFaceMagnets(plate1x1Size, 1, 1),
+      ...createBroadFaceMagnets(plate1x1Size, 1, 1, 'plate'),
     ],
   },
   {
@@ -746,7 +758,7 @@ export const BRICK_DEFINITIONS: BrickDefinition[] = [
     connectors: [
       ...createTopBottomGrid(plate1x2Size, 2, 1),
       ...createSideMagnetConnectors(plate1x2Size, 2, 1),
-      ...createPlateFaceMagnets(plate1x2Size, 2, 1),
+      ...createBroadFaceMagnets(plate1x2Size, 2, 1, 'plate'),
     ],
   },
   {
@@ -760,7 +772,7 @@ export const BRICK_DEFINITIONS: BrickDefinition[] = [
     connectors: [
       ...createTopBottomGrid(plate3x3Size, 3, 3),
       ...createSideMagnetConnectors(plate3x3Size, 3, 3),
-      ...createPlateFaceMagnets(plate3x3Size, 3, 3),
+      ...createBroadFaceMagnets(plate3x3Size, 3, 3, 'plate'),
     ],
   },
   {
@@ -774,7 +786,7 @@ export const BRICK_DEFINITIONS: BrickDefinition[] = [
     connectors: [
       ...createTopBottomGrid(plate1x6Size, 6, 1),
       ...createSideMagnetConnectors(plate1x6Size, 6, 1),
-      ...createPlateFaceMagnets(plate1x6Size, 6, 1),
+      ...createBroadFaceMagnets(plate1x6Size, 6, 1, 'plate'),
     ],
   },
   {
