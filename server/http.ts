@@ -1,6 +1,5 @@
 import { fromNodeHeaders } from 'better-auth/node';
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { auth } from './auth';
 
 export function sendJson(response: VercelResponse, status: number, value: unknown): void {
   response.status(status).setHeader('content-type', 'application/json; charset=utf-8').send(JSON.stringify(value));
@@ -19,6 +18,7 @@ export async function readJson<T = Record<string, unknown>>(request: VercelReque
 }
 
 export async function getSession(request: VercelRequest) {
+  const { auth } = await import('./auth');
   return auth.api.getSession({ headers: fromNodeHeaders(request.headers) });
 }
 
