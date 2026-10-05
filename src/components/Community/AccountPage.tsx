@@ -16,8 +16,13 @@ export function AccountPage() {
   const [newRecovery, setNewRecovery] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState('');
+  const [mode, setMode] = useState<'login' | 'register' | 'recover'>('login');
   const next = new URLSearchParams(location.search).get('next');
   const afterLogin = next?.startsWith('/') && !next.startsWith('//') ? next : '/account';
+  const chooseMode = (nextMode: 'login' | 'register' | 'recover') => {
+    setMode(nextMode);
+    setMessage('');
+  };
 
   const register = async () => {
     if (busy) return;
@@ -71,17 +76,28 @@ export function AccountPage() {
       <header className="community-header"><Link to="/" className="community-logo">数字积木</Link><Link to="/plaza">作品广场</Link></header>
       <section className="account-card">
         <div className="account-hero"><KeyRound size={28} /><div><h1>进入数字积木</h1><p>用设备自带的安全钥匙登录，孩子不用记复杂账号。</p></div></div>
-        <button className="community-primary wide" type="button" onClick={() => void login()} disabled={busy}><KeyRound size={18} />使用 Passkey 登录</button>
-        <div className="account-divider"><span>第一次来</span></div>
-        <label>给自己取个昵称<input value={nickname} onChange={(event) => setNickname(event.target.value)} maxLength={40} placeholder="例如：小火箭" /></label>
-        <label>设置 6 位监护 PIN<input value={guardianPin} onChange={(event) => setGuardianPin(event.target.value.replace(/\D/g, '').slice(0, 6))} inputMode="numeric" maxLength={6} placeholder="首次发布作品时使用" /></label>
-        <button className="community-secondary wide" type="button" onClick={() => void register()} disabled={busy || guardianPin.length !== 6 || !nickname.trim()}>{busy ? <LoaderCircle className="is-spinning" size={18} /> : <ShieldCheck size={18} />}创建 Passkey 账户</button>
-        <div className="account-divider"><span>丢失了设备</span></div>
-        <label>输入一次性恢复资料<textarea value={recoveryCode} onChange={(event) => setRecoveryCode(event.target.value)} rows={3} placeholder="LX-…" /></label>
-        <button className="community-quiet wide" type="button" onClick={() => void recover()} disabled={busy || !recoveryCode.trim()}>用恢复资料登记新设备</button>
+        {mode === 'login' && <>
+          <button className="community-primary wide" type="button" onClick={() => void login()} disabled={busy}><KeyRound size={18} />使用 Passkey 登录</button>
+          <div className="account-divider"><span>第一次来</span></div>
+          <button className="community-secondary wide" type="button" onClick={() => chooseMode('register')} disabled={busy}><ShieldCheck size={18} />新用户注册</button>
+          <button className="community-quiet wide" type="button" onClick={() => chooseMode('recover')} disabled={busy}>丢失设备？用恢复资料找回</button>
+        </>}
+        {mode === 'register' && <>
+          <button className="community-quiet" type="button" onClick={() => chooseMode('login')} disabled={busy}>← 返回登录</button>
+          <div className="account-divider"><span>新用户注册</span></div>
+          <label>给自己取个昵称<input value={nickname} onChange={(event) => setNickname(event.target.value)} maxLength={40} placeholder="例如：小火箭" /></label>
+          <label>设置 6 位监护 PIN<input value={guardianPin} onChange={(event) => setGuardianPin(event.target.value.replace(/\D/g, '').slice(0, 6))} inputMode="numeric" maxLength={6} placeholder="首次发布作品时使用" /></label>
+          <button className="community-secondary wide" type="button" onClick={() => void register()} disabled={busy || guardianPin.length !== 6 || !nickname.trim()}>{busy ? <LoaderCircle className="is-spinning" size={18} /> : <ShieldCheck size={18} />}创建 Passkey 账户</button>
+        </>}
+        {mode === 'recover' && <>
+          <button className="community-quiet" type="button" onClick={() => chooseMode('login')} disabled={busy}>← 返回登录</button>
+          <div className="account-divider"><span>找回账户</span></div>
+          <label>输入一次性恢复资料<textarea value={recoveryCode} onChange={(event) => setRecoveryCode(event.target.value)} rows={3} placeholder="LX-…" /></label>
+          <button className="community-secondary wide" type="button" onClick={() => void recover()} disabled={busy || !recoveryCode.trim()}>{busy ? <LoaderCircle className="is-spinning" size={18} /> : <KeyRound size={18} />}用恢复资料登记新设备</button>
+        </>}
         {newRecovery && <div className="recovery-box"><strong>请现在保存新的恢复资料</strong><code>{newRecovery}</code><button type="button" onClick={() => navigator.clipboard?.writeText(newRecovery)}>复制恢复资料</button></div>}
         {message && <p className="community-message" role="status">{message}</p>}
-        <p className="account-note">恢复资料只显示一次。它是找回账户的钥匙，请由家长保存。</p>
+        {mode !== 'login' && <p className="account-note">恢复资料只显示一次。它是找回账户的钥匙，请由家长保存。</p>}
       </section>
     </main>
   );
