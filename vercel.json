@@ -5,6 +5,7 @@
   "outputDirectory": "dist",
   "rewrites": [
     { "source": "/api/auth/(.*)", "destination": "/api/auth-handler?path=$1" },
-    { "source": "/api/v1/(.*)", "destination": "/api/community?route=$1" }
+    { "source": "/api/v1/(.*)", "destination": "/api/community?route=$1" },
+    { "source": "/(.*)", "destination": "/index.html" }
   ]
 }
