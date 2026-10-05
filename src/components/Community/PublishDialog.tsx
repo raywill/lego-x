@@ -27,7 +27,7 @@ export function PublishDialog({ onClose }: { onClose: () => void }) {
         connections,
         ...(provenance ? { provenance } : {}),
       };
-      const work = await communityApi.publish({ title, project, thumbnail: captureProjectThumbnail(), ...(needsPin ? { guardianPin } : {}) });
+      const work = await communityApi.publish({ title, project, thumbnail: captureProjectThumbnail(bricks), ...(needsPin ? { guardianPin } : {}) });
       setMessage(`已发布！作品编号：${work.id.slice(0, 8)}`);
       window.setTimeout(onClose, 900);
     } catch (error) { setMessage(error instanceof Error ? error.message : '发布失败，请再试一次'); }

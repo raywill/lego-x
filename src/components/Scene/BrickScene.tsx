@@ -128,7 +128,7 @@ export function BrickScene({ view, resetKey }: { view: CameraView; resetKey: num
       shadows="basic"
       dpr={[1, 1.75]}
       camera={{ position: [118, 92, 132], fov: 41, near: 0.1, far: 700 }}
-      gl={{ antialias: true, alpha: false, powerPreference: 'high-performance' }}
+      gl={{ antialias: true, alpha: false, powerPreference: 'high-performance', preserveDrawingBuffer: true }}
       onPointerDownCapture={(event) => event.currentTarget.focus()}
       onPointerMissed={() => {
         const state = useEditorStore.getState();
