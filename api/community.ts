@@ -1,1 +1,1 @@
-export { default } from './v1/[...route]';
+export { default } from './v1/[...route].js';

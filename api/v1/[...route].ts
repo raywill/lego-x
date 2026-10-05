@@ -1,10 +1,10 @@
 import { createHash, createHmac, randomBytes, randomUUID } from 'node:crypto';
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import type { ResultSetHeader, RowDataPacket } from 'mysql2';
-import { getDatabasePool, withTransaction } from '../../server/db';
-import { getSession, getCookie, getRoute, readJson, requireSession, sendError, sendJson, setCookie, setNoStore } from '../../server/http';
-import { createAccountContext, createPublicId, createRecoveryCode, digestRecoveryCode, hashGuardianPin, parseRecoveryPublicId, verifyAccountContext, verifyGuardianPin } from '../../server/security';
-import { COMMUNITY_CATALOG_VERSION, MAX_THUMBNAIL_BYTES, validatePublishedProject, type CurrentUser, type PublicProfile, type PublicWork, type PublicWorkSummary, type PublishedProject } from '../../shared/community';
+import { getDatabasePool, withTransaction } from '../../server/db.js';
+import { getSession, getCookie, getRoute, readJson, requireSession, sendError, sendJson, setCookie, setNoStore } from '../../server/http.js';
+import { createAccountContext, createPublicId, createRecoveryCode, digestRecoveryCode, hashGuardianPin, parseRecoveryPublicId, verifyAccountContext, verifyGuardianPin } from '../../server/security.js';
+import { COMMUNITY_CATALOG_VERSION, MAX_THUMBNAIL_BYTES, validatePublishedProject, type CurrentUser, type PublicProfile, type PublicWork, type PublicWorkSummary, type PublishedProject } from '../../shared/community.js';
 
 interface ProfileRow extends RowDataPacket { user_id: string; public_id: string; nickname: string; guardian_pin_hash: string; guardian_approved_at: Date | null; guardian_locked_until?: Date | null; account_status: string; }
 interface IntentRow extends RowDataPacket { id: string; user_id: string; kind: 'register' | 'recover'; used_at: Date | null; completed_at: Date | null; expires_at: Date; }

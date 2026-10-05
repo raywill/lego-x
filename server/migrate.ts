@@ -1,5 +1,5 @@
 import { readFile } from 'node:fs/promises';
-import { getDatabasePool } from './db';
+import { getDatabasePool } from './db.js';
 
 const pool = getDatabasePool();
 const authSchema = await readFile(new URL('./auth-schema.sql', import.meta.url), 'utf8');

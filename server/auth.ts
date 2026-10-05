@@ -1,8 +1,8 @@
 import { passkey } from '@better-auth/passkey';
 import { betterAuth } from 'better-auth';
 import type { RowDataPacket } from 'mysql2';
-import { getDatabasePool } from './db';
-import { verifyAccountContext } from './security';
+import { getDatabasePool } from './db.js';
+import { verifyAccountContext } from './security.js';
 
 interface IntentRow extends RowDataPacket {
   user_id: string;

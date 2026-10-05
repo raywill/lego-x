@@ -1,6 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { toNodeHandler } from 'better-auth/node';
-import { auth } from '../../server/auth';
+import { auth } from '../../server/auth.js';
 
 const handler = toNodeHandler(auth);
 

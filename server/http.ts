@@ -18,7 +18,7 @@ export async function readJson<T = Record<string, unknown>>(request: VercelReque
 }
 
 export async function getSession(request: VercelRequest) {
-  const { auth } = await import('./auth');
+  const { auth } = await import('./auth.js');
   return auth.api.getSession({ headers: fromNodeHeaders(request.headers) });
 }
 
