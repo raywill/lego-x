@@ -78,9 +78,11 @@ export function AccountPage() {
         <div className="account-hero"><KeyRound size={28} /><div><h1>进入数字积木</h1><p>用设备自带的安全钥匙登录，孩子不用记复杂账号。</p></div></div>
         {mode === 'login' && <>
           <button className="community-primary wide" type="button" onClick={() => void login()} disabled={busy}><KeyRound size={18} />使用 Passkey 登录</button>
-          <div className="account-divider"><span>第一次来</span></div>
-          <button className="community-secondary wide" type="button" onClick={() => chooseMode('register')} disabled={busy}><ShieldCheck size={18} />新用户注册</button>
-          <button className="community-quiet wide" type="button" onClick={() => chooseMode('recover')} disabled={busy}>丢失设备？用恢复资料找回</button>
+          <div className="account-entry-links" aria-label="账户帮助">
+            <button type="button" onClick={() => chooseMode('register')} disabled={busy}>新用户注册</button>
+            <span aria-hidden="true">·</span>
+            <button type="button" onClick={() => chooseMode('recover')} disabled={busy}>找回密码</button>
+          </div>
         </>}
         {mode === 'register' && <>
           <button className="community-quiet" type="button" onClick={() => chooseMode('login')} disabled={busy}>← 返回登录</button>
