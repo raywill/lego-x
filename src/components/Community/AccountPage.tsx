@@ -1,6 +1,6 @@
 import { KeyRound, Layers3, LoaderCircle, LogOut, Repeat2, ShieldCheck, Trash2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { authClient } from '../../community/authClient';
 import { communityApi, finishRecovery, finishRegistration, startRecovery, startRegistration } from '../../community/api';
 import { notifyAuthChanged, useCurrentUser } from '../../community/useCurrentUser';
@@ -8,6 +8,7 @@ import type { CurrentUser, PublicProfile } from '../../../shared/community';
 
 export function AccountPage() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { user, loading, refresh } = useCurrentUser();
   const [nickname, setNickname] = useState('小小创作者');
   const [guardianPin, setGuardianPin] = useState('');
@@ -15,6 +16,8 @@ export function AccountPage() {
   const [newRecovery, setNewRecovery] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState('');
+  const next = new URLSearchParams(location.search).get('next');
+  const afterLogin = next?.startsWith('/') && !next.startsWith('//') ? next : '/account';
 
   const register = async () => {
     if (busy) return;
@@ -39,7 +42,7 @@ export function AccountPage() {
       const result = await authClient.signIn.passkey();
       if (result.error) throw new Error(result.error.message || '登录没有完成');
       notifyAuthChanged();
-      navigate('/account');
+      navigate(afterLogin);
     } catch (error) { setMessage(error instanceof Error ? error.message : '登录失败，请再试一次'); }
     finally { setBusy(false); }
   };
