@@ -135,8 +135,6 @@ export function TopToolbar({ onPublish }: { onPublish?: () => void }) {
       </div>
 
       <div className="top-actions" aria-label="项目操作">
-        <Link className="community-toolbar-link" to="/plaza" title="打开作品广场"><Globe2 size={17} />作品广场</Link>
-        <Link className="community-toolbar-link" to="/account" title={user ? '查看我的作品和账户' : '登录或创建账户'}><UserRound size={17} />{user ? '我的' : '账户'}</Link>
         <div className="action-group history-actions">
           <button type="button" onClick={undo} disabled={!canUndo} aria-label="撤销" title="撤销（Ctrl/Cmd + Z）">
             <RotateCcw size={19} />{showLabel('撤销')}
@@ -148,6 +146,7 @@ export function TopToolbar({ onPublish }: { onPublish?: () => void }) {
         <span className="toolbar-divider" />
         <div className="action-group project-actions">
           <button type="button" onClick={startNew} aria-label="新建作品" title="清空画板，开始新作品"><Sparkles size={18} />{showLabel('新建')}</button>
+          <button type="button" onClick={() => projectFileRef.current?.click()} aria-label="打开 legox 作品文件" title="从电脑打开 .legox 作品文件"><FolderOpen size={18} />{showLabel('打开')}</button>
           <button
             type="button"
             onClick={() => void saveProjectFile()}
@@ -158,7 +157,6 @@ export function TopToolbar({ onPublish }: { onPublish?: () => void }) {
             {savingProjectFile ? <LoaderCircle className="is-spinning" size={18} /> : <Save size={18} />}
             {showLabel(savingProjectFile ? '保存中' : '保存')}
           </button>
-          <button type="button" onClick={() => projectFileRef.current?.click()} aria-label="打开 legox 作品文件" title="从电脑打开 .legox 作品文件"><FolderOpen size={18} />{showLabel('打开')}</button>
           <input
             ref={projectFileRef}
             type="file"
@@ -166,6 +164,15 @@ export function TopToolbar({ onPublish }: { onPublish?: () => void }) {
             hidden
             onChange={(event) => void openProjectFile(event)}
           />
+        </div>
+        <span className="toolbar-divider" />
+        <nav className="action-group community-actions" aria-label="社区导航">
+          <Link className="community-toolbar-link" to="/plaza" title="打开作品广场"><Globe2 size={17} />作品广场</Link>
+          <Link className="community-toolbar-link" to="/account" title={user ? '查看我的作品和账户' : '登录或创建账户'}><UserRound size={17} />{user ? '我的' : '账户'}</Link>
+        </nav>
+        <span className="toolbar-divider" />
+        <div className="action-group outcome-actions" aria-label="完成作品">
+          {onPublish && <button type="button" className="publish-toolbar-button" onClick={onPublish} disabled={!bricks.length} title="发布当前作品"><Globe2 size={17} />发布</button>}
           <div className="print-action" ref={printMenuRef}>
             <button
               type="button"
@@ -200,7 +207,6 @@ export function TopToolbar({ onPublish }: { onPublish?: () => void }) {
               </div>
             )}
           </div>
-          {onPublish && <button type="button" className="publish-toolbar-button" onClick={onPublish} disabled={!bricks.length} title="发布当前作品"><Globe2 size={17} />发布</button>}
         </div>
       </div>
     </header>
