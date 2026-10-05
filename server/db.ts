@@ -1,4 +1,3 @@
-import { attachDatabasePool } from '@vercel/functions';
 import mysql, { type Pool, type PoolConnection, type RowDataPacket } from 'mysql2/promise';
 
 let pool: Pool | undefined;
@@ -16,7 +15,6 @@ export function getDatabasePool(): Pool {
     enableKeepAlive: true,
     timezone: 'Z',
   });
-  if (process.env.VERCEL) attachDatabasePool(pool);
   return pool;
 }
 
