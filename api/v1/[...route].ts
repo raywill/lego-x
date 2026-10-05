@@ -47,7 +47,7 @@ function publicWorkFromRow(row: WorkRow, project?: PublishedProject): PublicWork
     id: row.id,
     title: row.title,
     author: { publicId: row.public_id, nickname: row.nickname },
-    thumbnailUrl: `/api/v1/work-versions/${row.version_id}/thumbnail`,
+    thumbnailUrl: `/api/thumbnail?version=${encodeURIComponent(row.version_id)}`,
     publishedAt: new Date(row.published_at).toISOString(),
     brickCount: Number(row.brick_count),
     connectionCount: Number(row.connection_count),

@@ -1,11 +1,14 @@
-import { KeyRound, LoaderCircle, ShieldCheck } from 'lucide-react';
-import { useState } from 'react';
+import { KeyRound, Layers3, LoaderCircle, LogOut, Repeat2, ShieldCheck } from 'lucide-react';
+import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { authClient } from '../../community/authClient';
-import { finishRecovery, finishRegistration, startRecovery, startRegistration } from '../../community/api';
+import { communityApi, finishRecovery, finishRegistration, startRecovery, startRegistration } from '../../community/api';
+import { notifyAuthChanged, useCurrentUser } from '../../community/useCurrentUser';
+import type { CurrentUser, PublicProfile } from '../../../shared/community';
 
 export function AccountPage() {
   const navigate = useNavigate();
+  const { user, loading, refresh } = useCurrentUser();
   const [nickname, setNickname] = useState('小小创作者');
   const [guardianPin, setGuardianPin] = useState('');
   const [recoveryCode, setRecoveryCode] = useState('');
@@ -23,6 +26,8 @@ export function AccountPage() {
       const completed = await finishRegistration();
       setNewRecovery(completed.recoveryCode);
       setMessage('账户已经创建。请把恢复资料保存好。');
+      notifyAuthChanged();
+      void refresh();
     } catch (error) { setMessage(error instanceof Error ? error.message : '注册失败，请再试一次'); }
     finally { setBusy(false); }
   };
@@ -33,7 +38,8 @@ export function AccountPage() {
     try {
       const result = await authClient.signIn.passkey();
       if (result.error) throw new Error(result.error.message || '登录没有完成');
-      navigate('/');
+      notifyAuthChanged();
+      navigate('/account');
     } catch (error) { setMessage(error instanceof Error ? error.message : '登录失败，请再试一次'); }
     finally { setBusy(false); }
   };
@@ -48,9 +54,14 @@ export function AccountPage() {
       const completed = await finishRecovery(result.data.id);
       setNewRecovery(completed.recoveryCode);
       setMessage('恢复成功。旧设备钥匙已撤销，请保存新的恢复资料。');
+      notifyAuthChanged();
+      void refresh();
     } catch (error) { setMessage(error instanceof Error ? error.message : '恢复失败，请检查恢复资料'); }
     finally { setBusy(false); }
   };
+
+  if (loading) return <main className="community-page account-page"><header className="community-header"><Link to="/" className="community-logo">数字积木</Link><Link to="/plaza">作品广场</Link></header><p className="community-empty">正在打开我的空间…</p></main>;
+  if (user && !newRecovery) return <MySpace user={user} />;
 
   return (
     <main className="community-page account-page">
@@ -71,4 +82,26 @@ export function AccountPage() {
       </section>
     </main>
   );
+}
+
+function MySpace({ user }: { user: CurrentUser }) {
+  const [profile, setProfile] = useState<PublicProfile | null>(null);
+  const [message, setMessage] = useState('正在打开我的作品…');
+  const [signingOut, setSigningOut] = useState(false);
+  const { refresh } = useCurrentUser();
+  useEffect(() => {
+    void communityApi.profile(user.publicId)
+      .then((value) => { setProfile(value); setMessage(''); })
+      .catch((error) => setMessage(error instanceof Error ? error.message : '暂时无法读取作品'));
+  }, [user.publicId]);
+  const signOut = async () => {
+    if (signingOut) return;
+    setSigningOut(true);
+    try {
+      await authClient.signOut();
+      notifyAuthChanged();
+      await refresh();
+    } finally { setSigningOut(false); }
+  };
+  return <main className="community-page my-page"><header className="community-header"><Link to="/" className="community-logo">数字积木</Link><nav><Link to="/plaza">作品广场</Link><Link className="active" to="/account">我的</Link></nav></header><section className="my-hero"><div className="profile-avatar">{user.nickname.slice(0, 1)}</div><div><span className="eyebrow">MY DIGITAL BRICKS</span><h1>{user.nickname}</h1><p>{profile ? `${profile.works.length} 件公开作品` : '我的作品空间'}</p></div><button className="signout-button" type="button" onClick={() => void signOut()} disabled={signingOut}><LogOut size={16} />{signingOut ? '退出中' : '退出登录'}</button></section><section className="my-works-heading"><div><h2>我的公开作品</h2><p>发布后的作品会显示在这里，其他小朋友可以二创。</p></div><Link className="community-primary" to="/">继续搭建</Link></section>{profile?.works.length ? <section className="work-grid">{profile.works.map((work) => <Link className="work-card" key={work.id} to={`/w/${work.id}`}><div className="work-thumb"><img src={work.thumbnailUrl} alt={`${work.title} 缩略图`} /></div><div className="work-card-body"><h2>{work.title}</h2><div className="work-stats"><span><Layers3 size={14} />{work.brickCount}</span><span><Repeat2 size={14} />{work.remixes}</span></div></div></Link>)}</section> : <p className="community-empty">{message || '还没有公开作品。完成一个作品后，点击“发布”就会出现在这里。'}</p>}</main>;
 }

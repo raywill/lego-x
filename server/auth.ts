@@ -41,8 +41,10 @@ export const auth = betterAuth({
   database: getDatabasePool(),
   trustedOrigins: [productionUrl, 'http://localhost:5173', 'http://127.0.0.1:5173'],
   session: {
-    expiresIn: 60 * 60 * 24 * 30,
-    updateAge: 60 * 60 * 24,
+    // A child's own device should stay signed in until they choose “退出登录”.
+    // Active sessions are renewed weekly and still use secure HttpOnly cookies.
+    expiresIn: 60 * 60 * 24 * 365,
+    updateAge: 60 * 60 * 24 * 7,
     cookieCache: { enabled: false },
   },
   advanced: {

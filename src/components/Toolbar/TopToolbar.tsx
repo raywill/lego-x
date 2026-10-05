@@ -1,4 +1,4 @@
-import { ChevronDown, Download, FolderOpen, Globe2, LoaderCircle, RotateCcw, RotateCw, Save, Sparkles } from 'lucide-react';
+import { ChevronDown, Download, FolderOpen, Globe2, LoaderCircle, RotateCcw, RotateCw, Save, Sparkles, UserRound } from 'lucide-react';
 import { type ChangeEvent, useEffect, useRef, useState } from 'react';
 import {
   LEGOX_DEFAULT_FILENAME,
@@ -11,6 +11,7 @@ import {
 import { downloadStl } from '../../export/stl';
 import { useEditorStore } from '../../store/editorStore';
 import { Link } from 'react-router-dom';
+import { useCurrentUser } from '../../community/useCurrentUser';
 
 function showLabel(action: string) {
   return <span className="action-label">{action}</span>;
@@ -26,6 +27,7 @@ const printScales = [
 type PrintScale = (typeof printScales)[number]['value'];
 
 export function TopToolbar({ onPublish }: { onPublish?: () => void }) {
+  const { user } = useCurrentUser();
   const [exporting, setExporting] = useState(false);
   const [savingProjectFile, setSavingProjectFile] = useState(false);
   const [printMenuOpen, setPrintMenuOpen] = useState(false);
@@ -134,7 +136,7 @@ export function TopToolbar({ onPublish }: { onPublish?: () => void }) {
 
       <div className="top-actions" aria-label="项目操作">
         <Link className="community-toolbar-link" to="/plaza" title="打开作品广场"><Globe2 size={17} />作品广场</Link>
-        <Link className="community-toolbar-link" to="/account" title="登录或管理账户"><Globe2 size={17} />账户</Link>
+        <Link className="community-toolbar-link" to="/account" title={user ? '查看我的作品和账户' : '登录或创建账户'}><UserRound size={17} />{user ? '我的' : '账户'}</Link>
         <div className="action-group history-actions">
           <button type="button" onClick={undo} disabled={!canUndo} aria-label="撤销" title="撤销（Ctrl/Cmd + Z）">
             <RotateCcw size={19} />{showLabel('撤销')}
