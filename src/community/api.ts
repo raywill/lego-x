@@ -23,6 +23,7 @@ export const communityApi = {
   publish: (payload: { title: string; project: unknown; thumbnail: string; guardianPin?: string; workId?: string }) => request<PublicWork>('/works', { method: 'POST', body: JSON.stringify(payload) }),
   like: (workId: string, liked: boolean) => request<{ liked: boolean }>(`/works/${encodeURIComponent(workId)}/like`, { method: liked ? 'POST' : 'DELETE' }),
   report: (workId: string, reason: string) => request<{ reported: boolean }>(`/works/${encodeURIComponent(workId)}/report`, { method: 'POST', body: JSON.stringify({ reason }) }),
+  unpublish: (workId: string) => request<{ unpublished: boolean }>(`/works/${encodeURIComponent(workId)}/unpublish`, { method: 'POST', body: '{}' }),
 };
 
 export async function startRegistration(nickname: string, guardianPin: string) {

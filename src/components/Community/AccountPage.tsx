@@ -1,4 +1,4 @@
-import { KeyRound, Layers3, LoaderCircle, LogOut, Repeat2, ShieldCheck } from 'lucide-react';
+import { KeyRound, Layers3, LoaderCircle, LogOut, Repeat2, ShieldCheck, Trash2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { authClient } from '../../community/authClient';
@@ -103,5 +103,13 @@ function MySpace({ user }: { user: CurrentUser }) {
       await refresh();
     } finally { setSigningOut(false); }
   };
-  return <main className="community-page my-page"><header className="community-header"><Link to="/" className="community-logo">数字积木</Link><nav><Link to="/plaza">作品广场</Link><Link className="active" to="/account">我的</Link></nav></header><section className="my-hero"><div className="profile-avatar">{user.nickname.slice(0, 1)}</div><div><span className="eyebrow">MY DIGITAL BRICKS</span><h1>{user.nickname}</h1><p>{profile ? `${profile.works.length} 件公开作品` : '我的作品空间'}</p></div><button className="signout-button" type="button" onClick={() => void signOut()} disabled={signingOut}><LogOut size={16} />{signingOut ? '退出中' : '退出登录'}</button></section><section className="my-works-heading"><div><h2>我的公开作品</h2><p>发布后的作品会显示在这里，其他小朋友可以二创。</p></div><Link className="community-primary" to="/">继续搭建</Link></section>{profile?.works.length ? <section className="work-grid">{profile.works.map((work) => <Link className="work-card" key={work.id} to={`/w/${work.id}`}><div className="work-thumb"><img src={work.thumbnailUrl} alt={`${work.title} 缩略图`} /></div><div className="work-card-body"><h2>{work.title}</h2><div className="work-stats"><span><Layers3 size={14} />{work.brickCount}</span><span><Repeat2 size={14} />{work.remixes}</span></div></div></Link>)}</section> : <p className="community-empty">{message || '还没有公开作品。完成一个作品后，点击“发布”就会出现在这里。'}</p>}</main>;
+  const removeWork = async (workId: string, title: string) => {
+    if (!window.confirm(`确定要删除“${title}”吗？\n它会从广场和你的空间隐藏；已有二创作品不会受影响。`)) return;
+    try {
+      await communityApi.unpublish(workId);
+      setProfile((current) => current ? { ...current, works: current.works.filter((work) => work.id !== workId) } : current);
+      setMessage('作品已删除。');
+    } catch (error) { setMessage(error instanceof Error ? error.message : '暂时无法删除作品'); }
+  };
+  return <main className="community-page my-page"><header className="community-header"><Link to="/" className="community-logo">数字积木</Link><nav><Link to="/plaza">作品广场</Link><Link className="active" to="/account">我的</Link></nav></header><section className="my-hero"><div className="profile-avatar">{user.nickname.slice(0, 1)}</div><div><span className="eyebrow">MY DIGITAL BRICKS</span><h1>{user.nickname}</h1><p>{profile ? `${profile.works.length} 件公开作品` : '我的作品空间'}</p></div><button className="signout-button" type="button" onClick={() => void signOut()} disabled={signingOut}><LogOut size={16} />{signingOut ? '退出中' : '退出登录'}</button></section><section className="my-works-heading"><div><h2>我的公开作品</h2><p>发布后的作品会显示在这里，其他小朋友可以二创。</p></div><Link className="community-primary" to="/">继续搭建</Link></section>{profile?.works.length ? <section className="work-grid">{profile.works.map((work) => <article className="work-card my-work-card" key={work.id}><Link className="my-work-main" to={`/w/${work.id}`}><div className="work-thumb"><img src={work.thumbnailUrl} alt={`${work.title} 缩略图`} /></div><div className="work-card-body"><h2>{work.title}</h2><div className="work-stats"><span><Layers3 size={14} />{work.brickCount}</span><span><Repeat2 size={14} />{work.remixes}</span></div></div></Link><button className="delete-work-button" type="button" onClick={() => void removeWork(work.id, work.title)}><Trash2 size={15} />删除作品</button></article>)}</section> : <p className="community-empty">{message || '还没有公开作品。完成一个作品后，点击“发布”就会出现在这里。'}</p>}</main>;
 }
