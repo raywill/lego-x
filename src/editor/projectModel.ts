@@ -158,8 +158,8 @@ const validateProjectValue = (
   value: unknown,
   dropMisalignedConnections = false,
 ): ProjectData => {
-  if (!isRecord(value) || value.version !== PROJECT_VERSION) {
-    throw new Error(`Invalid project: expected schema version ${PROJECT_VERSION}.`);
+  if (!isRecord(value) || (value.version !== PROJECT_VERSION && value.version !== 2)) {
+    throw new Error(`Invalid project: expected schema version ${PROJECT_VERSION} or 2.`);
   }
   if (!Array.isArray(value.bricks) || !Array.isArray(value.connections)) {
     throw new Error('Invalid project: bricks and connections must be arrays.');
@@ -179,7 +179,24 @@ const validateProjectValue = (
     connections.push(connection);
   }
 
-  return { version: PROJECT_VERSION, bricks, connections };
+  const provenance = value.provenance;
+  if (provenance !== undefined) {
+    if (!isRecord(provenance) || !isNonEmptyString(provenance.sourceWorkId) || !isNonEmptyString(provenance.sourceVersionId)) {
+      throw new Error('Invalid project: provenance is malformed.');
+    }
+  }
+  return {
+    version: value.version as 1 | 2,
+    bricks,
+    connections,
+    ...(typeof value.catalogVersion === 'number' ? { catalogVersion: value.catalogVersion } : {}),
+    ...(provenance ? {
+      provenance: {
+        sourceWorkId: String(provenance.sourceWorkId),
+        sourceVersionId: String(provenance.sourceVersionId),
+      },
+    } : {}),
+  };
 };
 
 export const createConnection = (
@@ -199,9 +216,11 @@ export const removeConnectionsForBrick = (
 
 export const serializeProject = (project: ProjectSnapshot): string => {
   const validated = validateProjectValue({
-    version: PROJECT_VERSION,
+    version: project.provenance || project.catalogVersion ? 2 : PROJECT_VERSION,
     bricks: project.bricks,
     connections: project.connections,
+    ...(project.catalogVersion === undefined ? {} : { catalogVersion: project.catalogVersion }),
+    ...(project.provenance === undefined ? {} : { provenance: project.provenance }),
   });
   return JSON.stringify(validated);
 };
@@ -226,4 +245,6 @@ export const deserializeProject = (serialized: string): ProjectData => {
 export const cloneProjectSnapshot = (project: ProjectSnapshot): ProjectSnapshot => ({
   bricks: project.bricks.map(cloneBrick),
   connections: project.connections.map(cloneConnection),
+  ...(project.catalogVersion === undefined ? {} : { catalogVersion: project.catalogVersion }),
+  ...(project.provenance === undefined ? {} : { provenance: { ...project.provenance } }),
 });

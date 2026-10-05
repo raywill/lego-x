@@ -90,8 +90,13 @@ export interface Connection {
 export interface ProjectSnapshot {
   bricks: BrickInstance[];
   connections: Connection[];
+  catalogVersion?: number;
+  provenance?: {
+    sourceWorkId: string;
+    sourceVersionId: string;
+  };
 }
 
 export interface ProjectData extends ProjectSnapshot {
-  version: typeof import('../config/brickConfig').PROJECT_VERSION;
+  version: 1 | 2;
 }

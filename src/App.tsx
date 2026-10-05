@@ -7,6 +7,7 @@ import type { CameraView } from './components/Scene/CameraRig';
 import { SelectionToolbar } from './components/Selection/SelectionToolbar';
 import { TopToolbar } from './components/Toolbar/TopToolbar';
 import { PrintWarnings } from './components/Warnings/PrintWarnings';
+import { PublishDialog } from './components/Community/PublishDialog';
 import { PRINT_BED } from './config/brickConfig';
 import { checkPrintability } from './editor/printability';
 import { useEditorStore } from './store/editorStore';
@@ -80,6 +81,7 @@ function SnapLegend() {
 export function App() {
   const [view, setView] = useState<CameraView>('home');
   const [viewResetKey, setViewResetKey] = useState(0);
+  const [publishOpen, setPublishOpen] = useState(false);
   const bricks = useEditorStore((state) => state.bricks);
   const connections = useEditorStore((state) => state.connections);
   const toast = useEditorStore((state) => state.toast);
@@ -132,7 +134,7 @@ export function App() {
 
   return (
     <main className="app-shell">
-      <TopToolbar />
+      <TopToolbar onPublish={() => setPublishOpen(true)} />
       <section className="workspace">
         <BrickPalette />
         <div className="scene-panel">
@@ -156,6 +158,7 @@ export function App() {
         </div>
       </section>
       {toast && <div className={`toast ${toast.startsWith('咔哒') ? 'snap-toast' : ''}`} role="status">{toast}</div>}
+      {publishOpen && <PublishDialog onClose={() => setPublishOpen(false)} />}
     </main>
   );
 }

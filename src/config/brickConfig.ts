@@ -24,5 +24,6 @@ export const PRINT_BED = {
 
 export const PROJECT_STORAGE_KEY = 'digital-bricks-project-v1';
 export const PROJECT_VERSION = 1 as const;
+export const BRICK_CATALOG_VERSION = 1 as const;
 export const HISTORY_LIMIT = 60;
 export const ROTATION_STEP = Math.PI / 2;

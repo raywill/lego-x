@@ -99,6 +99,7 @@ export interface GroupMoveState {
 export interface EditorStore {
   bricks: BrickInstance[];
   connections: Connection[];
+  provenance?: ProjectSnapshot['provenance'];
   selectedId: string | null;
   selectedIds: string[];
   multiSelectMode: boolean;
@@ -226,8 +227,8 @@ const normaliseProject = (
   return { bricks: collisionFreeBricks, connections: validConnections };
 };
 
-const snapshotOf = (state: Pick<EditorStore, 'bricks' | 'connections'>): ProjectSnapshot =>
-  cloneProjectSnapshot({ bricks: state.bricks, connections: state.connections });
+const snapshotOf = (state: Pick<EditorStore, 'bricks' | 'connections' | 'provenance'>): ProjectSnapshot =>
+  cloneProjectSnapshot({ bricks: state.bricks, connections: state.connections, provenance: state.provenance });
 
 const appendHistory = (
   history: readonly ProjectSnapshot[],
@@ -339,6 +340,7 @@ function rotateAndLand(
 export const useEditorStore = create<EditorStore>((set, get) => ({
   bricks: [],
   connections: [],
+  provenance: undefined,
   selectedId: null,
   selectedIds: [],
   multiSelectMode: false,
@@ -771,6 +773,7 @@ export const useEditorStore = create<EditorStore>((set, get) => ({
     set((state) => {
       if (state.bricks.length === 0 && state.connections.length === 0) {
         return {
+          provenance: undefined,
           selectedId: null,
           selectedIds: [],
           multiSelectMode: false,
@@ -780,6 +783,7 @@ export const useEditorStore = create<EditorStore>((set, get) => ({
         };
       }
       return withCommittedProject(state, [], [], {
+        provenance: undefined,
         selectedId: null,
         selectedIds: [],
         multiSelectMode: false,
@@ -871,6 +875,7 @@ export const useEditorStore = create<EditorStore>((set, get) => ({
           normalised.bricks,
           normalised.connections,
           {
+            provenance: project.provenance,
             selectedId: null,
             selectedIds: [],
             multiSelectMode: false,

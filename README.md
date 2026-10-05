@@ -45,3 +45,20 @@ npm test
 - `src/components/`：积木篮、场景、工具条与警告界面
 
 项目只保存积木定义 ID、位置、旋转与连接关系；连接器的世界坐标始终由定义和实例变换实时推导。
+
+## 账户与作品社区（TiDB Cloud Starter）
+
+社区功能使用 Vercel TypeScript Functions、Better Auth Passkey 和 TiDB Cloud Starter。未登录时，浏览器端建模、`localStorage`、`.legox` 文件和 STL 导出仍可独立使用。
+
+首次配置环境变量（不要把真实凭证提交到 Git）：
+
+```bash
+cp .env.example .env.local
+# 在 .env.local 填写 TiDB Starter 的 DATABASE_URL、BETTER_AUTH_SECRET、ACCOUNT_CONTEXT_SECRET
+npm run db:migrate
+npm run dev
+```
+
+部署到 Vercel 时，在项目的加密环境变量中配置同样的数据库和密钥，并将 `BETTER_AUTH_URL` 设为生产域名、`WEBAUTHN_RP_ID` 设为该域名。数据库迁移会创建 Better Auth、账户、作品版本、点赞、浏览统计和举报表；生产注册前应先用 `npm run db:migrate` 验证迁移已完成。
+
+社区入口：`/account`（Passkey 与一次性恢复资料）、`/plaza`（作品广场）、`/u/:publicId`（个人空间）、`/w/:workId`（作品详情）。
