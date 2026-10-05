@@ -1,4 +1,4 @@
-import { KeyRound, Layers3, LoaderCircle, LogOut, Repeat2, ShieldCheck, Trash2 } from 'lucide-react';
+import { Check, KeyRound, Layers3, LoaderCircle, LogOut, Repeat2, ShieldCheck, Trash2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { authClient } from '../../community/authClient';
@@ -14,6 +14,7 @@ export function AccountPage() {
   const [guardianPin, setGuardianPin] = useState('');
   const [recoveryCode, setRecoveryCode] = useState('');
   const [newRecovery, setNewRecovery] = useState<string | null>(null);
+  const [recoveryCopied, setRecoveryCopied] = useState(false);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState('');
   const [mode, setMode] = useState<'login' | 'register' | 'recover'>('login');
@@ -33,6 +34,7 @@ export function AccountPage() {
       if (!result.data) throw new Error(result.error?.message || 'Passkey 注册没有完成');
       const completed = await finishRegistration();
       setNewRecovery(completed.recoveryCode);
+      setRecoveryCopied(false);
       setMessage('账户已经创建。请把恢复资料保存好。');
       notifyAuthChanged();
       void refresh();
@@ -61,11 +63,24 @@ export function AccountPage() {
       if (!result.data) throw new Error(result.error?.message || '新 Passkey 没有完成');
       const completed = await finishRecovery(result.data.id);
       setNewRecovery(completed.recoveryCode);
+      setRecoveryCopied(false);
       setMessage('恢复成功。旧设备钥匙已撤销，请保存新的恢复资料。');
       notifyAuthChanged();
       void refresh();
     } catch (error) { setMessage(error instanceof Error ? error.message : '恢复失败，请检查恢复资料'); }
     finally { setBusy(false); }
+  };
+
+  const copyRecoveryCode = async () => {
+    if (!newRecovery) return;
+    try {
+      if (!navigator.clipboard?.writeText) throw new Error('Clipboard is unavailable');
+      await navigator.clipboard.writeText(newRecovery);
+      setRecoveryCopied(true);
+    } catch {
+      setRecoveryCopied(false);
+      setMessage('没有自动复制成功，请手动选中恢复资料保存。');
+    }
   };
 
   if (loading) return <main className="community-page account-page"><header className="community-header"><Link to="/" className="community-logo">数字积木</Link><Link to="/plaza">作品广场</Link></header><p className="community-empty">正在打开我的空间…</p></main>;
@@ -97,7 +112,7 @@ export function AccountPage() {
           <label>输入一次性恢复资料<textarea value={recoveryCode} onChange={(event) => setRecoveryCode(event.target.value)} rows={3} placeholder="LX-…" /></label>
           <button className="community-secondary wide" type="button" onClick={() => void recover()} disabled={busy || !recoveryCode.trim()}>{busy ? <LoaderCircle className="is-spinning" size={18} /> : <KeyRound size={18} />}用恢复资料登记新设备</button>
         </>}
-        {newRecovery && <div className="recovery-box"><strong>请现在保存新的恢复资料</strong><code>{newRecovery}</code><button type="button" onClick={() => navigator.clipboard?.writeText(newRecovery)}>复制恢复资料</button></div>}
+        {newRecovery && <div className="recovery-box"><strong>请现在保存新的恢复资料</strong><code>{newRecovery}</code><button type="button" onClick={() => void copyRecoveryCode()}>{recoveryCopied ? <><Check size={15} />已复制</> : '复制恢复资料'}</button></div>}
         {message && <p className="community-message" role="status">{message}</p>}
         {mode !== 'login' && <p className="account-note">恢复资料只显示一次。它是找回账户的钥匙，请由家长保存。</p>}
       </section>
