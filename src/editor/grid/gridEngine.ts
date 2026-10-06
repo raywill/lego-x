@@ -2,7 +2,7 @@ import { Box3, Mesh, Object3D, Vector3 } from 'three';
 
 import { getBrickDefinition } from '../../bricks/catalog';
 import { createBrickGroup } from '../../bricks/geometry';
-import { BRICK_LAYER, BRICK_UNIT, PLACEMENT_GRID } from '../../config/brickConfig';
+import { BRICK_LAYER, BRICK_UNIT, MINI_PLACEMENT_GRID, PLACEMENT_GRID } from '../../config/brickConfig';
 import type { BrickDefinition, BrickInstance, Vec3Tuple } from '../../types/model';
 
 export interface GridAxes {
@@ -53,9 +53,9 @@ export function getBrickBodyBounds(
 /**
  * Snaps the body's minimum corner, not its center. The normal horizontal grid
  * remains one 10 mm brick unit, while an already exact half-grid transform or
- * a rotated 5 mm-thick body keeps the 5 mm precision lattice. This preserves
- * exact connector snaps without making ordinary free placement unnecessarily
- * fiddly.
+ * a rotated 5 mm-thick body keeps the 5 mm precision lattice. The 5 mm mini
+ * cube is the only component allowed on a 2.5 mm body-edge lattice so its
+ * centered connector can mate with full-size bricks.
  */
 export function snapBrickToGrid(
   brick: BrickInstance,
@@ -67,14 +67,14 @@ export function snapBrickToGrid(
   if (axes.x !== false) {
     delta[0] = quantizeToGrid(
       bounds.min.x,
-      horizontalSnapStep(bounds.min.x, bounds.max.x),
+      horizontalSnapStep(bounds.min.x, bounds.max.x, definition ?? getBrickDefinition(brick.definitionId)),
     ) - bounds.min.x;
   }
   if (axes.y !== false) delta[1] = quantizeToGrid(bounds.min.y, BRICK_LAYER) - bounds.min.y;
   if (axes.z !== false) {
     delta[2] = quantizeToGrid(
       bounds.min.z,
-      horizontalSnapStep(bounds.min.z, bounds.max.z),
+      horizontalSnapStep(bounds.min.z, bounds.max.z, definition ?? getBrickDefinition(brick.definitionId)),
     ) - bounds.min.z;
   }
   return {
@@ -91,18 +91,25 @@ export function snapBrickToGrid(
 export function isBrickOnGrid(
   brick: BrickInstance,
   axes: GridAxes = { x: true, y: true, z: true },
-  definition?: BrickDefinition,
+  definitionOverride?: BrickDefinition,
 ): boolean {
-  const bounds = getBrickBodyBounds(brick, definition);
-  return (axes.x === false || isGridMultiple(bounds.min.x, PLACEMENT_GRID))
+  const bounds = getBrickBodyBounds(brick, definitionOverride);
+  const definition = definitionOverride ?? getBrickDefinition(brick.definitionId);
+  const horizontalStep = isMiniCube(definition) ? MINI_PLACEMENT_GRID : PLACEMENT_GRID;
+  return (axes.x === false || isGridMultiple(bounds.min.x, horizontalStep))
     && (axes.y === false || isGridMultiple(bounds.min.y, BRICK_LAYER))
-    && (axes.z === false || isGridMultiple(bounds.min.z, PLACEMENT_GRID));
+    && (axes.z === false || isGridMultiple(bounds.min.z, horizontalStep));
 }
 
-function horizontalSnapStep(min: number, max: number): number {
+function horizontalSnapStep(min: number, max: number, definition?: BrickDefinition): number {
+  if (isMiniCube(definition)) return MINI_PLACEMENT_GRID;
   if (isGridMultiple(min, PLACEMENT_GRID)) return PLACEMENT_GRID;
   const size = max - min;
   return isGridMultiple(size, BRICK_UNIT, 0.02) ? BRICK_UNIT : PLACEMENT_GRID;
+}
+
+function isMiniCube(definition?: BrickDefinition): boolean {
+  return Boolean(definition && definition.size.every((dimension) => isGridMultiple(dimension, BRICK_LAYER) && !isGridMultiple(dimension, BRICK_UNIT)));
 }
 
 function clean(value: number): number {

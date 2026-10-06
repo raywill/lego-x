@@ -4,9 +4,9 @@ import { BRICK_DEFINITIONS, getBrickDefinition } from './catalog';
 import { createBrickGroup, getBrickGroundY } from './geometry';
 
 describe('brick catalog', () => {
-  it('contains 34 unique, connector-driven construction pieces', () => {
-    expect(BRICK_DEFINITIONS).toHaveLength(34);
-    expect(new Set(BRICK_DEFINITIONS.map((definition) => definition.id)).size).toBe(34);
+  it('contains 35 unique, connector-driven construction pieces', () => {
+    expect(BRICK_DEFINITIONS).toHaveLength(35);
+    expect(new Set(BRICK_DEFINITIONS.map((definition) => definition.id)).size).toBe(35);
     expect(BRICK_DEFINITIONS.every((definition) => definition.connectors.length > 0)).toBe(true);
   });
 
@@ -83,6 +83,18 @@ describe('brick catalog', () => {
     mesh.geometry.dispose();
     const materials = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
     materials.forEach((material) => material.dispose());
+  });
+
+  it('provides a half-unit mini cube with scaled, short-range guide connectors', () => {
+    const definition = getBrickDefinition('mini-cube');
+    if (!definition) throw new Error('Expected mini cube definition.');
+
+    expect(definition.size).toEqual([5, 5, 5]);
+    expect(definition.connectors.find(({ id }) => id === 'top-stud-0-0')).toMatchObject({
+      snapDistance: 3,
+      guideScale: 0.55,
+    });
+    expect(definition.connectors.every(({ snapDistance }) => snapDistance === 3)).toBe(true);
   });
 
   it('places the printable body—not editor-only connector bumps—on the bed', () => {

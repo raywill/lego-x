@@ -1,11 +1,11 @@
 import type { ProjectSnapshot } from '../src/types/model';
 
-export const COMMUNITY_CATALOG_VERSION = 1 as const;
+export const COMMUNITY_CATALOG_VERSION = 2 as const;
 export const MAX_PUBLISHED_BRICKS = 500;
 export const MAX_PROJECT_JSON_BYTES = 2 * 1024 * 1024;
 export const MAX_THUMBNAIL_BYTES = 250 * 1024;
 export const KNOWN_BRICK_DEFINITION_IDS = new Set([
-  'cube-1', 'block-1x2', 'block-2x2', 'block-2x4', 'beam-long', 'plate-1x1', 'plate-1x2', 'plate-3x3', 'plate-1x6',
+  'cube-1', 'mini-cube', 'block-1x2', 'block-2x2', 'block-2x4', 'beam-long', 'plate-1x1', 'plate-1x2', 'plate-3x3', 'plate-1x6',
   'cylinder', 'cone-1', 'cone-2', 'disc', 'rod', 'ring', 'triangle-prism', 'right-triangle-prism', 'wedge', 'roof-wedge',
   'trapezoid-prism', 'half-cylinder', 'hemisphere', 'sphere', 'frame-square', 'frame-circle', 'frame-arch', 'block-concave-arc',
   'block-sphere-octant-cutout', 'quarter-cylinder', 'wheel', 'axle', 'hinge', 'wheel-large', 'circular-handle',

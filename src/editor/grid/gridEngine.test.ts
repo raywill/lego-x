@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { Vector3 } from 'three';
 
 import { BRICK_DEFINITIONS } from '../../bricks/catalog';
-import { BRICK_LAYER, BRICK_UNIT, PLACEMENT_GRID } from '../../config/brickConfig';
+import { BRICK_LAYER, BRICK_UNIT, MINI_PLACEMENT_GRID, PLACEMENT_GRID } from '../../config/brickConfig';
 import type { BrickInstance } from '../../types/model';
 import {
   getBrickBodyBounds,
@@ -57,7 +57,17 @@ describe('integer placement grid', () => {
     expect(isBrickOnGrid(upright)).toBe(true);
   });
 
-  it.each(BRICK_DEFINITIONS)('$id has a standard nominal and physical envelope', (definition) => {
+  it('keeps the mini cube centered on a full-size connector with a 2.5 mm body-edge lattice', () => {
+    const mini = snapBrickToGrid(instance('mini-cube', [-0.9, 2.7, 1.1]));
+    const bounds = getBrickBodyBounds(mini);
+
+    expect(mini.position).toEqual([0, 2.5, 0]);
+    expect(isGridMultiple(bounds.min.x, MINI_PLACEMENT_GRID)).toBe(true);
+    expect(isGridMultiple(bounds.min.z, MINI_PLACEMENT_GRID)).toBe(true);
+    expect(isBrickOnGrid(mini)).toBe(true);
+  });
+
+  it.each(BRICK_DEFINITIONS.filter((definition) => definition.id !== 'mini-cube'))('$id has a standard nominal and physical envelope', (definition) => {
     expect(isGridMultiple(definition.size[0], BRICK_UNIT)).toBe(true);
     expect(isGridMultiple(definition.size[1], BRICK_LAYER)).toBe(true);
     expect(isGridMultiple(definition.size[2], BRICK_UNIT)).toBe(true);

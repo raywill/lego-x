@@ -322,6 +322,20 @@ function createBroadFaceMagnets(
   ];
 }
 
+/** A half-unit cube uses the same generic connector types, but with a smaller
+ * magnetic reach and a scaled editor-only stud guide. */
+function createMiniCubeConnectors(size: Vec3Tuple): ConnectorDefinition[] {
+  return [
+    ...createTopBottomGrid(size, 1, 1),
+    ...createSideMagnetConnectors(size, 1, 1),
+    ...createBroadFaceMagnets(size, 1, 1, 'broad'),
+  ].map((connector) => ({
+    ...connector,
+    snapDistance: BRICK_UNIT * 0.3,
+    ...(connector.type === 'stud' ? { guideScale: 0.55 } : {}),
+  }));
+}
+
 export function createAxisPair(
   size: Vec3Tuple,
   axis: Axis,
@@ -531,6 +545,7 @@ const DISC = BRICK_CONFIG.discHeight;
 const ROD_DIAMETER = BRICK_CONFIG.rodRadius * 2;
 
 const cubeSize: Vec3Tuple = [U, U, U];
+const miniCubeSize: Vec3Tuple = [BRICK_LAYER, BRICK_LAYER, BRICK_LAYER];
 const block1x2Size: Vec3Tuple = [2 * U, U, U];
 const block2x2Size: Vec3Tuple = [2 * U, U, 2 * U];
 const block2x4Size: Vec3Tuple = [4 * U, U, 2 * U];
@@ -675,6 +690,16 @@ export const BRICK_DEFINITIONS: BrickDefinition[] = [
       ...createSideMagnetConnectors(cubeSize, 1, 1),
       ...createBroadFaceMagnets(cubeSize, 1, 1, 'broad'),
     ],
+  },
+  {
+    id: 'mini-cube',
+    name: '迷你方块',
+    shortName: '迷你方块',
+    category: 'blocks',
+    size: miniCubeSize,
+    color: '#ff83be',
+    geometry: { kind: 'box', size: miniCubeSize },
+    connectors: createMiniCubeConnectors(miniCubeSize),
   },
   {
     id: 'block-1x2',

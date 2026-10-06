@@ -13,6 +13,13 @@ interface IsometricBrickArt {
 }
 
 const CORE_BLOCK_ART: Record<string, IsometricBrickArt> = {
+  'mini-cube': {
+    top: 'M29 29 39 23 53 30 42 37Z',
+    front: 'M29 29 42 37 42 46 29 38Z',
+    side: 'M42 37 53 30 53 39 42 46Z',
+    highlight: 'M39 23 53 30',
+    studs: [[41, 30]],
+  },
   'cube-1': {
     top: 'M25 26 39 17 58 26 43 35Z',
     front: 'M25 26 43 35 43 51 25 42Z',
@@ -40,6 +47,20 @@ const CORE_BLOCK_ART: Record<string, IsometricBrickArt> = {
     side: 'M57 45 80 30 80 42 57 57Z',
     highlight: 'M25 14 80 30',
     studs: [[29, 21], [40, 24], [51, 27], [62, 30], [21, 28], [32, 31], [43, 34], [54, 37]],
+  },
+  'plate-1x1': {
+    top: 'M25 27 39 18 58 27 43 36Z',
+    front: 'M25 27 43 36 43 43 25 34Z',
+    side: 'M43 36 58 27 58 34 43 43Z',
+    highlight: 'M39 18 58 27',
+    studs: [[42, 27]],
+  },
+  'plate-3x3': {
+    top: 'M8 31 33 15 76 31 48 48Z',
+    front: 'M8 31 48 48 48 56 8 39Z',
+    side: 'M48 48 76 31 76 39 48 56Z',
+    highlight: 'M33 15 76 31',
+    studs: [[31, 24], [42, 28], [53, 32], [25, 29], [36, 33], [47, 37], [19, 34], [30, 38], [41, 42]],
   },
 };
 

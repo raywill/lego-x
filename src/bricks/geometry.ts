@@ -546,11 +546,11 @@ function appendMaleConnectorGeometry(
 
     const radius =
       connector.type === 'stud'
-        ? BRICK_CONFIG.studRadius
+        ? BRICK_CONFIG.studRadius * (connector.guideScale ?? 1)
         : BRICK_CONFIG.rodRadius;
     const length =
       connector.type === 'stud'
-        ? BRICK_CONFIG.studHeight
+        ? BRICK_CONFIG.studHeight * (connector.guideScale ?? 1)
         : BRICK_UNIT * 0.36;
     const geometry = new THREE.CylinderGeometry(
       radius,

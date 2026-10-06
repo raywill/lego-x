@@ -73,7 +73,9 @@ export function TopToolbar({ onPublish }: { onPublish?: () => void }) {
     try {
       const suffix = scale === 1 ? '' : `-${scale}x`;
       await downloadStl(bricks, `我的数字积木${suffix}.stl`, scale);
-      setToast(`${scale}× 打印文件好了，辅助凸点已去掉`);
+      const hasMiniCube = bricks.some((brick) => brick.definitionId === 'mini-cube');
+      const miniWarning = hasMiniCube && scale <= 0.5 ? '；迷你方块可能太小，打印前请确认' : '';
+      setToast(`${scale}× 打印文件好了，辅助凸点已去掉${miniWarning}`);
     } catch (error) {
       setToast(error instanceof Error ? error.message : '导出失败，请再试一次');
     } finally {

@@ -19,6 +19,8 @@ export interface ConnectorDefinition {
   compatibleWith: ConnectorType[];
   polarity?: ConnectorPolarity;
   snapDistance: number;
+  /** Display-only scale for the editor's connector guide; never exported. */
+  guideScale?: number;
   twistSteps?: 1 | 2 | 4;
 }
 

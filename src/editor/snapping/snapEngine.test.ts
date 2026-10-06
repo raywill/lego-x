@@ -245,6 +245,33 @@ describe('findBestSnap', () => {
     expect(isConnectionValid(candidate!.connection, [fixedPlate, snapped])).toBe(true);
   });
 
+  it('centers a mini cube on a full-size top connector without breaking the grid rule', () => {
+    const cube = getBrickDefinition('cube-1');
+    const mini = getBrickDefinition('mini-cube');
+    if (!cube || !mini) throw new Error('Expected cube and mini cube definitions.');
+    const fixedCube = instance('fixed-cube', cube.id, [0, 5, 0]);
+    const movingMini = instance('moving-mini', mini.id, [0.8, 12.8, -0.6]);
+
+    const candidate = findBestSnap({
+      dragged: movingMini,
+      draggedDefinition: mini,
+      targets: getWorldConnectors(fixedCube, cube),
+      preserveDraggedRotation: true,
+    });
+
+    expect(candidate?.committable).toBe(true);
+    expect(candidate?.source.connector.type).toBe('socket');
+    expect(candidate?.target.connector.type).toBe('stud');
+    expect(candidate?.transform.position).toEqual([0, 12.5, 0]);
+    const snapped: BrickInstance = {
+      ...movingMini,
+      position: [...candidate!.transform.position],
+      rotation: [...candidate!.transform.rotation],
+    };
+    expect(bricksOverlap(fixedCube, snapped)).toBe(false);
+    expect(isConnectionValid(candidate!.connection, [fixedCube, snapped])).toBe(true);
+  });
+
   it('side snapping ignores the height difference between a cube and a flat thin plate', () => {
     const cube = getBrickDefinition('cube-1');
     const plate = getBrickDefinition('plate-1x2');
