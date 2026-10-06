@@ -26,10 +26,7 @@ function logAiSkillHint() {
   aiSkillHintLogged = true;
   const skillUrl = `${window.location.origin}/digital-bricks-modeling-skill.md`;
   console.info(
-    '%cDigital Bricks · AI 建模 Skill 已就绪\n%c1. 打开并复制：' + skillUrl
-      + '\n2. 在 ChatGPT 或其他 LLM 新建对话，先粘贴整份 Skill。'
-      + '\n3. 描述想搭的东西，并要求只返回完整 .legox JSON。'
-      + '\n4. 将 JSON 保存为 xxx.legox，回到数字积木顶部点“打开”导入。\n%cSkill 已包含积木目录、网格、吸附、无重叠与打印约束。',
+    '%cDigital Bricks · 把下面整段指令复制给 ChatGPT 或其他 AI：\n\n%c请阅读 [' + skillUrl + '](' + skillUrl + ')，并严格遵循其中的规则，为 Digital Bricks 生成一个可以直接打开的 .legox 模型文件。\n\n示例：请用现有的通用积木生成一座适合孩子搭建的简单小房子，包含墙、底板和屋顶；只使用 Skill 中已有的积木，不要新增积木定义、STL、网格或说明文字。请只返回完整、有效的 .legox JSON。\n\n%c将 AI 返回的内容保存为 xxx.legox，然后回到数字积木顶部点击“打开”导入。',
     'color:#5d50da;font-size:14px;font-weight:800;',
     'color:#3d3853;font-size:12px;line-height:1.7;',
     'color:#746d8c;font-size:12px;',
