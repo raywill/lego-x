@@ -1,5 +1,6 @@
 import { Home, Layers3 } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useWebMcpTools } from './app/useWebMcpTools';
 import { BrickPalette } from './components/BrickPalette/BrickPalette';
 import { BrickScene } from './components/Scene/BrickScene';
@@ -79,6 +80,8 @@ function SnapLegend() {
 }
 
 export function App() {
+  const location = useLocation();
+  const navigate = useNavigate();
   const [view, setView] = useState<CameraView>('home');
   const [viewResetKey, setViewResetKey] = useState(0);
   const [publishOpen, setPublishOpen] = useState(false);
@@ -88,6 +91,12 @@ export function App() {
   const setToast = useEditorStore((state) => state.setToast);
   const warnings = useMemo(() => checkPrintability(bricks, connections), [bricks, connections]);
   useWebMcpTools();
+
+  useEffect(() => {
+    if (new URLSearchParams(location.search).get('publish') !== '1') return;
+    setPublishOpen(true);
+    navigate(location.pathname, { replace: true });
+  }, [location.pathname, location.search, navigate]);
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {

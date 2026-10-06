@@ -17,9 +17,11 @@ export function AccountPage() {
   const [recoveryCopied, setRecoveryCopied] = useState(false);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState('');
-  const [mode, setMode] = useState<'login' | 'register' | 'recover'>('login');
   const next = new URLSearchParams(location.search).get('next');
+  const requestedMode = new URLSearchParams(location.search).get('mode');
+  const [mode, setMode] = useState<'login' | 'register' | 'recover'>(requestedMode === 'register' ? 'register' : 'login');
   const afterLogin = next?.startsWith('/') && !next.startsWith('//') ? next : '/account';
+  const returnsToPublishing = afterLogin.startsWith('/?publish=1');
   const chooseMode = (nextMode: 'login' | 'register' | 'recover') => {
     setMode(nextMode);
     setMessage('');
@@ -112,7 +114,7 @@ export function AccountPage() {
           <label>输入一次性恢复资料<textarea value={recoveryCode} onChange={(event) => setRecoveryCode(event.target.value)} rows={3} placeholder="LX-…" /></label>
           <button className="community-secondary wide" type="button" onClick={() => void recover()} disabled={busy || !recoveryCode.trim()}>{busy ? <LoaderCircle className="is-spinning" size={18} /> : <KeyRound size={18} />}用恢复资料登记新设备</button>
         </>}
-        {newRecovery && <div className="recovery-box"><strong>请现在保存新的恢复资料</strong><code>{newRecovery}</code><button type="button" onClick={() => void copyRecoveryCode()}>{recoveryCopied ? <><Check size={15} />已复制</> : '复制恢复资料'}</button></div>}
+        {newRecovery && <div className="recovery-box"><strong>请现在保存新的恢复资料</strong><code>{newRecovery}</code><button type="button" onClick={() => void copyRecoveryCode()}>{recoveryCopied ? <><Check size={15} />已复制</> : '复制恢复资料'}</button>{returnsToPublishing && <button className="recovery-continue" type="button" onClick={() => navigate(afterLogin)}>我已保存，继续发布作品</button>}</div>}
         {message && <p className="community-message" role="status">{message}</p>}
         {mode !== 'login' && <p className="account-note">恢复资料只显示一次。它是找回账户的钥匙，请由家长保存。</p>}
       </section>
