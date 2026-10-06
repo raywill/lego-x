@@ -19,6 +19,23 @@ const viewLabels: Array<[CameraView, string]> = [
   ['side', '侧视'],
 ];
 
+let aiSkillHintLogged = false;
+
+function logAiSkillHint() {
+  if (aiSkillHintLogged || window.location.pathname !== '/') return;
+  aiSkillHintLogged = true;
+  const skillUrl = `${window.location.origin}/digital-bricks-modeling-skill.md`;
+  console.info(
+    '%cDigital Bricks · AI 建模 Skill 已就绪\n%c1. 打开并复制：' + skillUrl
+      + '\n2. 在 ChatGPT 或其他 LLM 新建对话，先粘贴整份 Skill。'
+      + '\n3. 描述想搭的东西，并要求只返回完整 .legox JSON。'
+      + '\n4. 将 JSON 保存为 xxx.legox，回到数字积木顶部点“打开”导入。\n%cSkill 已包含积木目录、网格、吸附、无重叠与打印约束。',
+    'color:#5d50da;font-size:14px;font-weight:800;',
+    'color:#3d3853;font-size:12px;line-height:1.7;',
+    'color:#746d8c;font-size:12px;',
+  );
+}
+
 function CameraControls({ view, onChange }: { view: CameraView; onChange: (view: CameraView) => void }) {
   return (
     <div className="camera-controls" aria-label="观察方向">
@@ -91,6 +108,8 @@ export function App() {
   const setToast = useEditorStore((state) => state.setToast);
   const warnings = useMemo(() => checkPrintability(bricks, connections), [bricks, connections]);
   useWebMcpTools();
+
+  useEffect(() => { logAiSkillHint(); }, []);
 
   useEffect(() => {
     if (new URLSearchParams(location.search).get('publish') !== '1') return;
