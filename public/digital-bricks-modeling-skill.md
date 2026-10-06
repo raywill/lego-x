@@ -11,7 +11,7 @@ Use this instruction when someone asks you to make a model for the Digital Brick
 
 Turn the user's idea into one valid `.legox` JSON project. The file must open in Digital Bricks and must use its generic construction bricks—not a car, house, animal, or other semantic prefab.
 
-Return a short Chinese build summary, then the complete JSON in one `json` code block. If a file-writing tool is available, also save the JSON as `<model-name>.legox`.
+Return **only** the complete JSON in one `json` code block—no build summary, Markdown outside that code block, explanation, or comments. If a file-writing tool is available, also save the exact JSON as `<model-name>.legox`.
 
 Never generate STL, mesh vertices, mesh faces, Three.js code, arbitrary CAD geometry, or a new brick definition.
 
@@ -30,20 +30,14 @@ Never generate STL, mesh vertices, mesh faces, Three.js code, arbitrary CAD geom
       "color": "#ff6b5f"
     }
   ],
-  "connections": [
-    {
-      "brickA": "b1",
-      "connectorA": "top-stud-0-0",
-      "brickB": "b2",
-      "connectorB": "bottom-socket-0-0"
-    }
-  ]
+  "connections": []
 }
 ```
 
+- The output must be strict JSON. Use ASCII half-width double quotation marks (`"`) for every JSON key and string value; never use Chinese/full-width quotation marks (`“”` or `「」`). Do not use trailing commas, comments, or Markdown fences inside the saved file.
 - Use millimeters. `position` is the center of the brick body, not its corner.
 - `color` is optional. Use a `#RRGGBB` color when it makes a structure easier to understand.
-- Omit `connections` when there are no verified connections. Never store connector world positions.
+- `connections` is required, even when there are no verified connections: use `"connections": []`. Never omit this field and never store connector world positions.
 - Use unique stable brick IDs such as `b1`, `b2`, `roof-left`, and `wheel-front-left`.
 
 ## Catalog: only these `definitionId` values are legal
@@ -135,4 +129,5 @@ Before returning a file, verify all of the following:
 5. Normal body edges obey the 5 mm grid; mini cube horizontal edges obey the 2.5 mm exception.
 6. No body overlaps another body with positive volume.
 7. No body extends below the bed.
-8. Every connection has two distinct existing brick IDs and real connector IDs on the corresponding definitions.
+8. `connections` is present and is an array (use `[]` when empty); every connection has two distinct existing brick IDs and real connector IDs on the corresponding definitions.
+9. The file is parseable strict JSON and every JSON quote is the ASCII character `"`, never a full-width quote.
