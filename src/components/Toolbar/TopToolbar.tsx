@@ -72,7 +72,7 @@ export function TopToolbar({ onPublish }: { onPublish?: () => void }) {
     setToast(`正在按 ${scale}× 合成实体…`);
     try {
       const suffix = scale === 1 ? '' : `-${scale}x`;
-      await downloadStl(bricks, `我的数字积木${suffix}.stl`, scale);
+      await downloadStl(bricks, `我的数字积木${suffix}.stl`, scale, connections);
       const hasMiniCube = bricks.some((brick) => brick.definitionId === 'mini-cube');
       const miniWarning = hasMiniCube && scale <= 0.5 ? '；迷你方块可能太小，打印前请确认' : '';
       setToast(`${scale}× 打印文件好了，辅助凸点已去掉${miniWarning}`);

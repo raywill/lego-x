@@ -7,9 +7,12 @@ import {
   Box3,
   BufferAttribute,
   BufferGeometry,
+  CylinderGeometry,
   Group,
   Mesh,
   MeshStandardMaterial,
+  Quaternion,
+  Vector3,
   type Material,
 } from 'three';
 import { STLExporter } from 'three/examples/jsm/exporters/STLExporter.js';
@@ -18,9 +21,12 @@ import { mergeVertices } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { getBrickDefinition } from '../bricks/catalog';
 import { createBrickGroup } from '../bricks/geometry';
 import { snapBrickToGrid } from '../editor/grid/gridEngine';
-import type { BrickInstance } from '../types/model';
+import { getWorldConnectors } from '../editor/snapping/snapEngine';
+import type { BrickInstance, Connection } from '../types/model';
 
 const MANIFOLD_WELD_TOLERANCE_MM = 1e-5;
+const SPHERE_CONNECTOR_FOOT_RADIUS_MM = 3;
+const SPHERE_CONNECTOR_FOOT_HEIGHT_MM = 2.5;
 
 let manifoldModulePromise: Promise<ManifoldToplevel> | undefined;
 
@@ -43,7 +49,61 @@ function getManifoldModule(): Promise<ManifoldToplevel> {
  * Builds the geometry used by export. The editor's visible studs and rods are
  * interaction affordances only, so they are deliberately omitted here.
  */
-export function createPrintableAssembly(bricks: BrickInstance[]): Group {
+function addSphereConnectorFeet(
+  assembly: Group,
+  bricks: readonly BrickInstance[],
+  connections: readonly Connection[],
+): void {
+  const alignedBricks = new Map(bricks.map((brick) => [brick.id, snapBrickToGrid(brick)]));
+
+  for (const connection of connections) {
+    const sphereEndpoint = [
+      { brickId: connection.brickA, connectorId: connection.connectorA },
+      { brickId: connection.brickB, connectorId: connection.connectorB },
+    ].find(({ brickId, connectorId }) => {
+      const brick = alignedBricks.get(brickId);
+      const definition = brick && getBrickDefinition(brick.definitionId);
+      return definition?.id === 'sphere'
+        && (connectorId === 'top-stud' || connectorId === 'bottom-socket');
+    });
+    if (!sphereEndpoint) continue;
+
+    const sphere = alignedBricks.get(sphereEndpoint.brickId);
+    const sphereDefinition = sphere && getBrickDefinition(sphere.definitionId);
+    if (!sphere || !sphereDefinition) continue;
+    const connector = getWorldConnectors(sphere, sphereDefinition)
+      .find(({ connectorId }) => connectorId === sphereEndpoint.connectorId);
+    if (!connector) continue;
+
+    // The foot is centred on the logical connection plane. It therefore
+    // overlaps both the ball and its mate by 1.25 mm, turning a point contact
+    // into a 6 mm-wide, watertight printable bridge without changing editor
+    // geometry or placement rules.
+    const foot = new Mesh(
+      new CylinderGeometry(
+        SPHERE_CONNECTOR_FOOT_RADIUS_MM,
+        SPHERE_CONNECTOR_FOOT_RADIUS_MM,
+        SPHERE_CONNECTOR_FOOT_HEIGHT_MM,
+        24,
+      ),
+      new MeshStandardMaterial({ color: '#ffffff', roughness: 0.72, metalness: 0.02 }),
+    );
+    foot.name = `sphere-print-foot-${sphere.id}-${sphereEndpoint.connectorId}`;
+    foot.position.set(...connector.position);
+    foot.quaternion.copy(
+      new Quaternion().setFromUnitVectors(
+        new Vector3(0, 1, 0),
+        new Vector3(...connector.normal).normalize(),
+      ),
+    );
+    assembly.add(foot);
+  }
+}
+
+export function createPrintableAssembly(
+  bricks: BrickInstance[],
+  connections: readonly Connection[] = [],
+): Group {
   const assembly = new Group();
   assembly.name = 'Digital Bricks printable assembly';
 
@@ -60,6 +120,8 @@ export function createPrintableAssembly(bricks: BrickInstance[]): Group {
     object.rotation.set(...alignedBrick.rotation);
     assembly.add(object);
   }
+
+  addSphereConnectorFeet(assembly, bricks, connections);
 
   assembly.updateMatrixWorld(true);
   const bounds = new Box3().setFromObject(assembly, true);
@@ -183,8 +245,11 @@ function hasTriangles(geometry: BufferGeometry): boolean {
   return Boolean(position && position.count >= 3 && triangleEntries >= 3);
 }
 
-async function buildUnionGeometry(bricks: BrickInstance[]): Promise<BufferGeometry> {
-  const assembly = createPrintableAssembly(bricks);
+async function buildUnionGeometry(
+  bricks: BrickInstance[],
+  connections: readonly Connection[],
+): Promise<BufferGeometry> {
+  const assembly = createPrintableAssembly(bricks, connections);
   const solids: Manifold[] = [];
   const worldGeometries: BufferGeometry[] = [];
 
@@ -236,11 +301,12 @@ async function buildUnionGeometry(bricks: BrickInstance[]): Promise<BufferGeomet
 export async function buildBinaryStl(
   bricks: BrickInstance[],
   scale = 1,
+  connections: readonly Connection[] = [],
 ): Promise<ArrayBuffer> {
   if (!bricks.length) throw new Error('场景里还没有积木');
   if (!Number.isFinite(scale) || scale <= 0) throw new Error('打印比例必须大于 0');
 
-  const geometry = await buildUnionGeometry(bricks);
+  const geometry = await buildUnionGeometry(bricks, connections);
   geometry.scale(scale, scale, scale);
   if (!hasTriangles(geometry)) {
     geometry.dispose();
@@ -272,8 +338,9 @@ export async function downloadStl(
   bricks: BrickInstance[],
   filename = '我的数字积木.stl',
   scale = 1,
+  connections: readonly Connection[] = [],
 ): Promise<void> {
-  const data = await buildBinaryStl(bricks, scale);
+  const data = await buildBinaryStl(bricks, scale, connections);
   const blob = new Blob([data], { type: 'model/stl' });
   const url = URL.createObjectURL(blob);
   const anchor = document.createElement('a');

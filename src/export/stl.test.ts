@@ -1,8 +1,9 @@
 import { describe, expect, it } from 'vitest';
+import { Mesh } from 'three';
 
 import { BRICK_DEFINITIONS, getBrickDefinition } from '../bricks/catalog';
-import type { BrickInstance, Vec3Tuple } from '../types/model';
-import { buildBinaryStl } from './stl';
+import type { BrickInstance, Connection, Vec3Tuple } from '../types/model';
+import { buildBinaryStl, createPrintableAssembly } from './stl';
 
 interface Triangle {
   a: Vec3Tuple;
@@ -125,6 +126,60 @@ describe('STL export', () => {
     const xCoordinates = triangles.flatMap(({ a, b, c }) => [a[0], b[0], c[0]]);
     expect(Math.min(...xCoordinates)).toBeCloseTo(-5, 5);
     expect(Math.max(...xCoordinates)).toBeCloseTo(15, 5);
+  });
+
+  it('adds a hidden 6 mm by 2.5 mm printable foot for a sphere pole connection', async () => {
+    const sphereDefinition = getBrickDefinition('sphere');
+    if (!sphereDefinition) throw new Error('Expected sphere definition.');
+    const base = cube('base', 0);
+    const sphere: BrickInstance = {
+      id: 'ball',
+      definitionId: 'sphere',
+      // Its bottom pole meets the base's top surface at y=10.
+      position: [0, 20, 0],
+      rotation: [0, 0, 0],
+    };
+    const connection: Connection = {
+      brickA: 'base',
+      connectorA: 'top-stud-0-0',
+      brickB: 'ball',
+      connectorB: 'bottom-socket',
+    };
+
+    const assembly = createPrintableAssembly([base, sphere], [connection]);
+    const printableFeet: Mesh[] = [];
+    assembly.traverse((child) => {
+      if (child instanceof Mesh && child.name.startsWith('sphere-print-foot-')) printableFeet.push(child);
+    });
+    expect(printableFeet).toHaveLength(1);
+    const foot = printableFeet[0];
+    expect(foot.position.y).toBeCloseTo(10, 5);
+    foot.geometry.computeBoundingBox();
+    expect(foot.geometry.boundingBox?.max.x).toBeCloseTo(3, 5);
+    expect(foot.geometry.boundingBox?.min.x).toBeCloseTo(-3, 5);
+    expect(foot.geometry.boundingBox?.max.y).toBeCloseTo(1.25, 5);
+    expect(foot.geometry.boundingBox?.min.y).toBeCloseTo(-1.25, 5);
+
+    const triangles = parseBinaryStl(await buildBinaryStl([base, sphere], 1, [connection]));
+    expect(triangles.length).toBeGreaterThan(0);
+    const yCoordinates = triangles.flatMap(({ a, b, c }) => [a[1], b[1], c[1]]);
+    expect(Math.min(...yCoordinates)).toBeCloseTo(0, 5);
+    expect(Math.max(...yCoordinates)).toBeCloseTo(30, 5);
+  });
+
+  it('does not add a sphere foot without a logical top or bottom connection', () => {
+    const sphere: BrickInstance = {
+      id: 'ball',
+      definitionId: 'sphere',
+      position: [0, 10, 0],
+      rotation: [0, 0, 0],
+    };
+    const assembly = createPrintableAssembly([sphere]);
+    const printableFeet: Mesh[] = [];
+    assembly.traverse((child) => {
+      if (child instanceof Mesh && child.name.startsWith('sphere-print-foot-')) printableFeet.push(child);
+    });
+    expect(printableFeet).toHaveLength(0);
   });
 
   it('exports disconnected printable bodies without producing an empty STL', async () => {
