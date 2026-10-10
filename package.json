@@ -8,6 +8,7 @@
     "build": "tsc -b && vite build",
     "test": "vitest run",
     "test:watch": "vitest",
+    "start:ecs": "tsx server/ecs.ts",
     "db:migrate": "tsx server/migrate.ts"
   },
   "dependencies": {

@@ -17,6 +17,12 @@ const baseURL = process.env.BETTER_AUTH_URL || (process.env.NODE_ENV === 'produc
   ? productionUrl
   : 'http://localhost:5173');
 const rpID = process.env.WEBAUTHN_RP_ID || new URL(baseURL).hostname;
+const trustedOrigins = [...new Set([
+  baseURL,
+  productionUrl,
+  'http://localhost:5173',
+  'http://127.0.0.1:5173',
+])];
 
 async function resolveContext(context?: string | null) {
   const payload = verifyAccountContext(context);
@@ -39,7 +45,7 @@ export const auth = betterAuth({
   baseURL,
   secret: process.env.BETTER_AUTH_SECRET,
   database: getDatabasePool(),
-  trustedOrigins: [productionUrl, 'http://localhost:5173', 'http://127.0.0.1:5173'],
+  trustedOrigins,
   session: {
     // A child's own device should stay signed in until they choose “退出登录”.
     // Active sessions are renewed weekly and still use secure HttpOnly cookies.

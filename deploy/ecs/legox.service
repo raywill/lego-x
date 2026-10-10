@@ -1,0 +1,23 @@
+[Unit]
+Description=Digital Bricks API
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=www-data
+Group=www-data
+WorkingDirectory=/home/wwwroot/bricks.reactshare.cn
+EnvironmentFile=/home/wwwroot/bricks.reactshare.cn/.env.production
+Environment=NODE_ENV=production
+Environment=PORT=3100
+Environment=BETTER_AUTH_URL=https://bricks.reactshare.cn
+Environment=WEBAUTHN_RP_ID=bricks.reactshare.cn
+ExecStart=/usr/bin/npm run start:ecs
+Restart=always
+RestartSec=5
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target
