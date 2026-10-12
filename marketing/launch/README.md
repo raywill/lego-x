@@ -2,6 +2,8 @@
 
 更新时间：2026-10-12
 
+渠道范围：站点所有者已授权公开发布和常规公开回复；V2EX 因无账号暂停，不纳入本轮分发。
+
 ## 核心定位
 
 > 一个给孩子和大人玩的浏览器 3D 数字积木：拖拽就会自动落位和卡接，完成后可保存、二创，并导出无内部接缝的 STL 去 3D 打印；开始搭建无需注册。
@@ -26,7 +28,6 @@
 | --- | --- |
 | 小红书 | <https://bricks.reactshare.cn/start?utm_source=xiaohongshu&utm_medium=social&utm_campaign=launch_202610> |
 | 即刻 | <https://bricks.reactshare.cn/start?utm_source=jike&utm_medium=social&utm_campaign=launch_202610> |
-| V2EX | <https://bricks.reactshare.cn/start?utm_source=v2ex&utm_medium=community&utm_campaign=launch_202610> |
 | Three.js Forum | <https://bricks.reactshare.cn/start?utm_source=threejs_forum&utm_medium=community&utm_campaign=launch_202610> |
 | OpenAI Showcase | <https://bricks.reactshare.cn/start?utm_source=openai_showcase&utm_medium=directory&utm_campaign=launch_202610> |
 | Awesome WebMCP | <https://bricks.reactshare.cn/start?utm_source=awesome_webmcp&utm_medium=directory&utm_campaign=launch_202610> |
@@ -62,7 +63,7 @@
 
 配图顺序：竖版首发图 → 火星车作品图 → 猫耳小屋作品图。第二、三张旧素材不含网址，可以继续使用，但发布前应确认画面与真实积木目录一致。
 
-## V2EX「分享创造」文案
+## V2EX「分享创造」文案（本轮暂停）
 
 标题：
 
