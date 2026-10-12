@@ -1,0 +1,13 @@
+/home/wwwlogs/bricks.reactshare.cn.campaign.jsonl {
+    daily
+    rotate 30
+    compress
+    delaycompress
+    missingok
+    notifempty
+    create 0640 www-data adm
+    sharedscripts
+    postrotate
+        invoke-rc.d nginx rotate >/dev/null 2>&1
+    endscript
+}

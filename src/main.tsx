@@ -1,6 +1,7 @@
 import { lazy, StrictMode, Suspense } from 'react';
 import { createRoot } from 'react-dom/client';
 import { BrowserRouter, Route, Routes } from 'react-router-dom';
+import { CampaignPageTracker } from './analytics/CampaignPageTracker';
 import './styles.css';
 
 const App = lazy(() => import('./App').then((module) => ({ default: module.App })));
@@ -17,6 +18,7 @@ function PageFallback() {
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <BrowserRouter>
+      <CampaignPageTracker />
       <Suspense fallback={<PageFallback />}>
         <Routes>
           <Route path="/" element={<App />} />

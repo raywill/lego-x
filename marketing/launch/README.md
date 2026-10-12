@@ -126,7 +126,6 @@ Showcase 投稿涉及作者身份、图片使用授权和公开展示许可，�
 ## 后续渠道
 
 - Three.js Forum Showcase：<https://discourse.threejs.org/c/showcase/5>
-- V2EX 分享创造：<https://www.v2ex.com/go/create>
 - Vercel Community Showcase：<https://community.vercel.com/c/showcase/12>
 - 少数派产品自荐：<https://sspai.com/post/40262>
 - Product Hunt：<https://www.producthunt.com/launch>
@@ -136,6 +135,16 @@ Hacker News 的 Show HN 规则明确不接受由 AI 生成或改写的投稿文�
 
 ## 第一轮衡量
 
-通过各渠道 UTM 与 Nginx access log 先比较：落地页访问、`/build` 点击、作品页分享访问和渠道质量。产品内下一轮再补隐私友好的关键事件：首次放置、首次连接、保存或导出、发布完成、分享和二创发布。
+通过各渠道 UTM 与匿名页面事件先比较：落地页访问、进入搭建页的转场、作品页访问和渠道质量。产品内下一轮再补隐私友好的关键事件：首次放置、首次连接、保存或导出、发布完成、分享和二创发布。
+
+生产环境已经启用独立的匿名推广日志：只记录时间、抽象页面类型、上一页面类型、安全的 UTM 字段和外部来源域名；不记录 IP、Cookie、完整网址、作品编号、浏览器类型或用户标识。查看最近 24 小时的渠道报告：
+
+```bash
+ssh root@bricks.reactshare.cn "cd /home/wwwroot/bricks.reactshare.cn && npm run marketing:report -- --since=24h"
+```
+
+查看最近 7 天时把 `24h` 改成 `7d`。报告按 UTM 或外部来源域名汇总落地页、搭建页、作品广场和作品页的浏览次数，并单独统计 30 分钟内从落地页进入搭建页的转场。`Transition rate` 是转场次数除以落地页浏览次数，不是去重用户转化率；刷新或直接打开搭建页不会算作转化。机器人、预览器和常见命令行探测会在写入匿名日志前过滤。
+
+可用 `--from=2026-10-12T13:00:00+08:00` 设置固定推广起点，也可增加 `--source=github`、`--campaign=launch_202610` 或 `--format=json` 进行筛选和导出。报告会自动读取当前日志和压缩后的轮转日志；推广日志每天轮换，保留 30 份。
 
 扩大到 3D 打印社区前，先补一组真实打印成品照片与参数；不要用生成的打印效果图代替真实成品证明。

@@ -30,11 +30,6 @@ export function LandingPage() {
       if (value) params.set(key, value);
     });
 
-    if (!params.has('utm_source')) {
-      params.set('utm_source', 'landing');
-      params.set('utm_medium', 'product');
-      params.set('utm_campaign', 'launch_202610');
-    }
     params.set('utm_content', content);
 
     return `${pathname}?${params.toString()}`;
