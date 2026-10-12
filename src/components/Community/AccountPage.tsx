@@ -2,6 +2,7 @@ import { Check, KeyRound, Layers3, LoaderCircle, LogOut, Repeat2, ShieldCheck, T
 import { useEffect, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { authClient } from '../../community/authClient';
+import { usePageMeta } from '../../app/usePageMeta';
 import { communityApi, finishRecovery, finishRegistration, startRecovery, startRegistration } from '../../community/api';
 import { notifyAuthChanged, useCurrentUser } from '../../community/useCurrentUser';
 import type { CurrentUser, PublicProfile } from '../../../shared/community';
@@ -17,6 +18,12 @@ export function AccountPage() {
   const [recoveryCopied, setRecoveryCopied] = useState(false);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState('');
+  usePageMeta({
+    title: '账户与我的作品｜数字积木 Digital Bricks',
+    description: '使用设备 Passkey 进入数字积木作品空间。',
+    canonicalPath: '/account',
+    robots: 'noindex, nofollow',
+  });
   const next = new URLSearchParams(location.search).get('next');
   const requestedMode = new URLSearchParams(location.search).get('mode');
   const [mode, setMode] = useState<'login' | 'register' | 'recover'>(requestedMode === 'register' ? 'register' : 'login');
@@ -117,6 +124,7 @@ export function AccountPage() {
         {newRecovery && <div className="recovery-box"><strong>请现在保存新的恢复资料</strong><code>{newRecovery}</code><button type="button" onClick={() => void copyRecoveryCode()}>{recoveryCopied ? <><Check size={15} />已复制</> : '复制恢复资料'}</button>{returnsToPublishing && <button className="recovery-continue" type="button" onClick={() => navigate(afterLogin)}>我已保存，继续发布作品</button>}</div>}
         {message && <p className="community-message" role="status">{message}</p>}
         {mode !== 'login' && <p className="account-note">恢复资料只显示一次。它是找回账户的钥匙，请由家长保存。</p>}
+        <p className="account-privacy"><a href="/privacy.html">数据与隐私说明</a></p>
       </section>
     </main>
   );

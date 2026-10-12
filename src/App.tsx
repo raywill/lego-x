@@ -1,6 +1,7 @@
 import { Home, Layers3 } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
+import { usePageMeta } from './app/usePageMeta';
 import { useWebMcpTools } from './app/useWebMcpTools';
 import { BrickPalette } from './components/BrickPalette/BrickPalette';
 import { BrickScene } from './components/Scene/BrickScene';
@@ -104,6 +105,10 @@ export function App() {
   const toast = useEditorStore((state) => state.toast);
   const setToast = useEditorStore((state) => state.setToast);
   const warnings = useMemo(() => checkPrintability(bricks, connections), [bricks, connections]);
+  usePageMeta({
+    title: '数字积木 Digital Bricks｜在线 3D 积木建模与 STL 导出',
+    description: '在浏览器里像搭积木一样完成 3D 创作：拖拽吸附、AI 生成 .legox、一键导出 STL，并在作品广场分享和二创。无需安装。',
+  });
   useWebMcpTools();
 
   useEffect(() => { logAiSkillHint(); }, []);

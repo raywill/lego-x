@@ -1,0 +1,140 @@
+# Digital Bricks 首轮推广包
+
+更新时间：2026-10-12
+
+## 核心定位
+
+> 一个给孩子和大人玩的浏览器 3D 数字积木：拖拽就会自动落位和卡接，完成后可保存、二创，并导出无内部接缝的 STL 去 3D 打印；开始搭建无需注册。
+
+家长、老师和创客空间是第一决策人群；孩子是主要使用者。对成人强调“不用学 CAD、无需安装、无需先注册、可以打印”，对孩子强调“马上能搭、作品能分享、能从别人的作品继续创造”。
+
+不要使用 LEGO 品牌、兼容或替代品表述。AI 能力应表述为“让 AI 按公开规则生成 `.legox`，再导入编辑器”，不要暗示站内已经内置生成式 AI。
+
+## 已完成素材
+
+- 横版社交预览：[`../../public/social-preview.png`](../../public/social-preview.png)
+- 竖版首发图：[`01-digital-bricks-launch.png`](./01-digital-bricks-launch.png)
+- 正式推广落地页：<https://bricks.reactshare.cn/start>
+- AI 建模规则：<https://bricks.reactshare.cn/digital-bricks-modeling-skill.md>
+- GitHub：<https://github.com/raywill/lego-x>
+
+仓库中的 `marketing/xiaohongshu/` 和 `marketing/xiaohongshu-v2/` 是早期素材；其中部分图片带旧域名。首发只使用本目录中的正式版本。
+
+## 渠道链接
+
+| 渠道 | 可直接使用的链接 |
+| --- | --- |
+| 小红书 | <https://bricks.reactshare.cn/start?utm_source=xiaohongshu&utm_medium=social&utm_campaign=launch_202610> |
+| 即刻 | <https://bricks.reactshare.cn/start?utm_source=jike&utm_medium=social&utm_campaign=launch_202610> |
+| V2EX | <https://bricks.reactshare.cn/start?utm_source=v2ex&utm_medium=community&utm_campaign=launch_202610> |
+| Three.js Forum | <https://bricks.reactshare.cn/start?utm_source=threejs_forum&utm_medium=community&utm_campaign=launch_202610> |
+| OpenAI Showcase | <https://bricks.reactshare.cn/start?utm_source=openai_showcase&utm_medium=directory&utm_campaign=launch_202610> |
+| Awesome WebMCP | <https://bricks.reactshare.cn/start?utm_source=awesome_webmcp&utm_medium=directory&utm_campaign=launch_202610> |
+| Product Hunt | <https://bricks.reactshare.cn/start?utm_source=product_hunt&utm_medium=launch&utm_campaign=launch_202610> |
+| GitHub | <https://bricks.reactshare.cn/start?utm_source=github&utm_medium=referral&utm_campaign=launch_202610> |
+
+## 小红书首发文案
+
+标题：
+
+```text
+给孩子做了一个能打印的 3D 积木网站
+```
+
+正文：
+
+```text
+不用装软件，也不用先学 CAD。
+
+打开网页，从左边拖一块积木进来，它会自己落到格子上；把连接点靠近，还会自动“咔哒”卡住。搭好以后可以：
+
+① 保存成 .legox，下次接着搭
+② 导出无内部接缝的 STL 去 3D 打印
+③ 发布到作品广场，让朋友从你的作品继续二创
+④ 把公开规则交给 AI，让它先生成一个 .legox 草稿，再自己修改
+
+搭建、保存和导出都不需要注册。现在还在很早期，特别想知道小朋友会在哪一步卡住，以及你最希望增加哪种积木。
+
+体验：bricks.reactshare.cn/start
+
+#3D打印 #儿童编程 #STEAM教育 #亲子创作 #独立开发 #数字积木
+```
+
+配图顺序：竖版首发图 → 火星车作品图 → 猫耳小屋作品图。第二、三张旧素材不含网址，可以继续使用，但发布前应确认画面与真实积木目录一致。
+
+## V2EX「分享创造」文案
+
+标题：
+
+```text
+做了一个给小朋友玩的浏览器 3D 数字积木：自动卡接，还能导出 STL 打印
+```
+
+正文：
+
+```text
+最近把一个浏览器里的 3D 数字积木工具上线了。目标是把第一次 3D 建模的门槛降到“拖一块积木进来”。
+
+它目前支持 35 种原创通用积木、连接点吸附、重力落位、侧面贴合、多选/复制/撤销，以及 .legox 本地文件。导出时用 Manifold 做实体并集，得到没有内部接缝的二进制 STL。开始搭建和导出都不需要账户。
+
+我还把积木目录和放置规则整理成公开的 AI 建模规则：AI 可以按规则生成 .legox 草稿，用户导入后继续在同一套编辑器里调整。站内也有作品广场和保留来源的二创。
+
+在线体验：{V2EX_UTM_LINK}
+源码：https://github.com/raywill/lego-x
+
+我最想听三类反馈：触控操作是否顺手、还缺哪类基础零件、实际打印时哪个比例和连接结构最容易出问题。
+```
+
+发布时把 `{V2EX_UTM_LINK}` 换成上表中的 V2EX 链接。
+
+## Three.js Forum Showcase
+
+标题：
+
+```text
+Digital Bricks — a child-friendly R3F construction editor with connector snapping and manifold STL export
+```
+
+正文：
+
+```text
+I built Digital Bricks, a browser-based 3D construction editor designed to make a first modeling experience feel like playing with blocks.
+
+It uses explicit connector frames and quaternion alignment for snapping, deterministic gravity placement with collision checks, and Manifold to union the finished assembly into a watertight binary STL. Building and export work without an account. Public projects can be shared and remixed with source attribution.
+
+Live demo: {THREEJS_UTM_LINK}
+Source: https://github.com/raywill/lego-x
+
+I would especially value feedback on touch controls, camera assistance during drag placement, and the STL workflow for real prints.
+```
+
+发布时把 `{THREEJS_UTM_LINK}` 换成上表中的 Three.js Forum 链接，并附一个真实吸附操作短视频。
+
+## WebMCP 目录条目
+
+```text
+Digital Bricks — Child-friendly browser 3D construction studio whose WebMCP tools let an agent list brick types, inspect the visible project, and add bricks to the same canvas a person is editing.
+```
+
+- OpenAI Developers Showcase：<https://openai.com/form/showcase-submission/>
+- Awesome WebMCP：<https://github.com/webmachinelearning/awesome-webmcp/blob/main/CONTRIBUTING.md>
+- WebMCP directory：<https://webmcp.com/>
+
+Showcase 投稿涉及作者身份、图片使用授权和公开展示许可，应由站点所有者复核后提交。WebMCP 仍是实验能力，对外不要表述为“所有浏览器都已支持”。
+
+## 后续渠道
+
+- Three.js Forum Showcase：<https://discourse.threejs.org/c/showcase/5>
+- V2EX 分享创造：<https://www.v2ex.com/go/create>
+- Vercel Community Showcase：<https://community.vercel.com/c/showcase/12>
+- 少数派产品自荐：<https://sspai.com/post/40262>
+- Product Hunt：<https://www.producthunt.com/launch>
+- Peerlist Launchpad：<https://peerlist.io/launchpad>
+
+Hacker News 的 Show HN 规则明确不接受由 AI 生成或改写的投稿文字。若投 HN，作者需要根据真实开发经历亲自重写标题与正文，本推广包不提供可直接粘贴的 HN 文案。
+
+## 第一轮衡量
+
+通过各渠道 UTM 与 Nginx access log 先比较：落地页访问、`/build` 点击、作品页分享访问和渠道质量。产品内下一轮再补隐私友好的关键事件：首次放置、首次连接、保存或导出、发布完成、分享和二创发布。
+
+扩大到 3D 打印社区前，先补一组真实打印成品照片与参数；不要用生成的打印效果图代替真实成品证明。

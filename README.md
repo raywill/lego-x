@@ -1,64 +1,89 @@
-# 数字积木（Digital Bricks）
+# 数字积木 · Digital Bricks
 
-一个面向儿童的浏览器 3D 拼搭 MVP。核心操作是：拖入积木，让凸点 `●` 靠近凹槽 `○`，自动对齐并卡接。
+给孩子、家长和创客使用的浏览器 3D 积木工具。拖入积木后会自动落位和卡接，完成的作品可以保存为 `.legox`、发布到作品广场，或导出无内部接缝的 STL 去 3D 打印。
 
-> 这是原创的数字积木尺寸与连接系统，不声明兼容任何实体积木品牌。
+**[在线体验](https://bricks.reactshare.cn/start?utm_source=github&utm_medium=referral&utm_campaign=launch_202610)** · [直接开始搭建](https://bricks.reactshare.cn/build?utm_source=github&utm_medium=referral&utm_campaign=launch_202610) · [浏览作品广场](https://bricks.reactshare.cn/plaza?utm_source=github&utm_medium=referral&utm_campaign=launch_202610)
 
-## 运行
+![数字积木从浏览器 3D 搭建到 STL 打印的功能示意](./public/social-preview.png)
+
+## 它适合谁
+
+- 想让孩子接触空间结构、设计和 3D 打印的家长与老师
+- 不想先学习复杂 CAD，只想快速把想法搭出来的创客
+- 想用 AI 生成一个积木草稿，再亲手调整和打印的人
+- 喜欢分享作品、从别人作品继续二创的数字积木玩家
+
+开始搭建、保存本机作品和导出 STL 都不需要账户，也不需要安装软件。
+
+## 能做什么
+
+- 35 种原创通用积木，覆盖方块、板件、圆件、斜面、框架与机械件
+- 基于显式连接器和四元数对齐的自动吸附
+- 确定性重力落位、接触面预测、防穿透与吸附预览
+- 移动、90° 旋转、复制、多选、撤销和重做
+- 本机保存、`.legox` 文件导入导出
+- Manifold 实体并集，生成无内部接缝的二进制 STL
+- 打印尺寸、越界、悬浮和基础悬垂提醒
+- 作品广场、作者空间、喜欢、举报和保留来源的二创
+- Passkey 账户与首次发布监护 PIN；浏览和创作无需登录
+
+> Digital Bricks 使用原创尺寸与连接系统，不声明兼容任何实体积木品牌。
+
+## 让 AI 帮你搭草稿
+
+项目提供一份公开的 [Digital Bricks AI 建模规则](https://bricks.reactshare.cn/digital-bricks-modeling-skill.md)。把下面这段话交给能够读取公开网址的 ChatGPT 或其他 AI：
+
+```text
+请阅读 https://bricks.reactshare.cn/digital-bricks-modeling-skill.md，并严格遵循其中的规则，为 Digital Bricks 生成一个 .legox 模型文件。只使用 Skill 中已有的积木，不要新增积木定义、STL、网格或说明文字。请只返回完整、有效的 .legox 文件。模型要求：生成一座带门窗和屋顶的小房子。
+```
+
+下载生成的 `.legox` 文件，在顶部工具栏选择“打开”，就可以继续移动、换色、连接或导出 STL。
+
+## 本地开发
+
+需要 Node.js 20+。
 
 ```bash
 npm install
 npm run dev
 ```
 
-生产构建和测试：
+验证生产构建和测试：
 
 ```bash
 npm run build
 npm test
 ```
 
-## 已实现
+主要目录：
 
-- 25 种数据驱动的通用积木，内部单位为毫米
-- 基于显式连接器和四元数对齐的吸附引擎
-- 吸附预览会把预测姿态下所有实际接触的目标连接点标成蓝色
-- 方角 block；顶部凸点只辅助建模，不进入打印文件
-- 基础砖四侧带逻辑贴面点，靠近时会自动贴平
-- 松手后按确定性重力落到最高承托面，吸附成功时仍以卡接为优先
-- 拖动时用深色接触面、落位幽灵和下落引导线预告最终位置
-- 预览落点时提供幅度受限的智能视角辅助，不会抢走手动镜头控制
-- 自由放置、拖动、90° 旋转、复制、删除
-- 撤销/重做及键盘快捷键
-- 本机保存/读取（`localStorage`）
-- 通过 Manifold 实体并集生成无内部接缝的二进制 STL
-- 打印区域、悬浮与基础悬垂提醒
-- 顶视、正视、侧视、默认视角，以及轨道旋转/缩放/平移
+- `src/bricks/`：数据驱动的积木目录与程序化几何
+- `src/editor/`：吸附、重力、碰撞、移动、选择与项目文件
+- `src/export/`：Manifold STL 合并与导出
+- `src/components/`：编辑器、作品社区与推广落地页
+- `api/`、`server/`：账户、作品社区和 ECS 运行时
+- `public/`：SEO、隐私说明、AI 建模规则和分享素材
+- `marketing/launch/`：首发图片、渠道文案与 UTM 链接
 
-## 主要结构
+## 作品社区配置
 
-- `src/bricks/`：积木目录与程序化几何
-- `src/editor/snapping/`：独立吸附引擎
-- `src/editor/gravity/`：独立重力落位与接触面预测
-- `src/store/`：Zustand 编辑器状态和历史
-- `src/export/`：STL 几何合并与导出
-- `src/components/`：积木篮、场景、工具条与警告界面
-
-项目只保存积木定义 ID、位置、旋转与连接关系；连接器的世界坐标始终由定义和实例变换实时推导。
-
-## 账户与作品社区（TiDB Cloud Starter）
-
-社区功能使用 Vercel TypeScript Functions、Better Auth Passkey 和 TiDB Cloud Starter。未登录时，浏览器端建模、`localStorage`、`.legox` 文件和 STL 导出仍可独立使用。
-
-首次配置环境变量（不要把真实凭证提交到 Git）：
+作品社区使用 Better Auth Passkey 和 MySQL/TiDB。未配置服务端环境变量时，浏览器建模、`localStorage`、`.legox` 文件与 STL 导出仍可独立使用。
 
 ```bash
 cp .env.example .env.local
-# 在 .env.local 填写 TiDB Starter 的 DATABASE_URL、BETTER_AUTH_SECRET、ACCOUNT_CONTEXT_SECRET
+# 填写 DATABASE_URL、BETTER_AUTH_SECRET、ACCOUNT_CONTEXT_SECRET 等变量
 npm run db:migrate
 npm run dev
 ```
 
-部署到 Vercel 时，在项目的加密环境变量中配置同样的数据库和密钥，并将 `BETTER_AUTH_URL` 设为生产域名、`WEBAUTHN_RP_ID` 设为该域名。数据库迁移会创建 Better Auth、账户、作品版本、点赞、浏览统计和举报表；生产注册前应先用 `npm run db:migrate` 验证迁移已完成。
+不要把真实凭证提交到 Git。生产部署还需要把 `BETTER_AUTH_URL` 设为正式站点地址，并让 `WEBAUTHN_RP_ID` 与域名一致。
 
-社区入口：`/account`（Passkey 与一次性恢复资料）、`/plaza`（作品广场）、`/u/:publicId`（个人空间）、`/w/:workId`（作品详情）。
+## 搜索收录
+
+部署完成后可以把首页、推广页、广场和隐私说明提交给支持 IndexNow 的搜索引擎：
+
+```bash
+npm run seo:submit
+```
+
+[数据与隐私说明](https://bricks.reactshare.cn/privacy.html)列出了本机数据、账户数据、必要 Cookie 和公开作品的处理方式。

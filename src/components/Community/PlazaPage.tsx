@@ -2,12 +2,18 @@ import { Heart, Layers3, Repeat2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { communityApi } from '../../community/api';
+import { usePageMeta } from '../../app/usePageMeta';
 import { AccountLink } from './AccountLink';
 import type { PublicWorkSummary } from '../../../shared/community';
 
 export function PlazaPage() {
   const [works, setWorks] = useState<PublicWorkSummary[]>([]);
   const [message, setMessage] = useState('正在寻找有趣作品…');
+  usePageMeta({
+    title: '作品广场｜数字积木 Digital Bricks',
+    description: '浏览数字积木创作者的公开作品，选择喜欢的作品继续二创，或从第一块积木开始搭建。',
+    canonicalPath: '/plaza',
+  });
   useEffect(() => { void communityApi.plaza().then((result) => { setWorks(result.works); setMessage(result.works.length ? '' : '广场还在等待第一批作品。'); }).catch((error) => setMessage(error instanceof Error ? error.message : '作品广场暂时不可用')); }, []);
   return (
     <main className="community-page">
@@ -20,5 +26,5 @@ export function PlazaPage() {
 }
 
 function WorkCard({ work, rank }: { work: PublicWorkSummary; rank: number }) {
-  return <Link className="work-card" to={`/w/${work.id}`}><div className="work-thumb"><img src={work.thumbnailUrl} alt="" /><span className="work-rank">#{rank}</span></div><div className="work-card-body"><h2>{work.title}</h2><p>作者：{work.author.nickname}</p><div className="work-stats"><span><Heart size={14} />{work.likes}</span><span><Repeat2 size={14} />{work.remixes}</span><span><Layers3 size={14} />{work.brickCount}</span></div></div></Link>;
+  return <Link className="work-card" to={`/w/${work.id}`}><div className="work-thumb"><img src={work.thumbnailUrl} alt={`${work.title} 缩略图`} loading="lazy" decoding="async" /><span className="work-rank">#{rank}</span></div><div className="work-card-body"><h2>{work.title}</h2><p>作者：{work.author.nickname}</p><div className="work-stats"><span><Heart size={14} />{work.likes}</span><span><Repeat2 size={14} />{work.remixes}</span><span><Layers3 size={14} />{work.brickCount}</span></div></div></Link>;
 }

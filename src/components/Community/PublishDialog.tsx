@@ -1,12 +1,13 @@
-import { KeyRound, LoaderCircle, Save, ShieldCheck, X } from 'lucide-react';
+import { CheckCircle2, Copy, ExternalLink, KeyRound, LoaderCircle, Save, Share2, ShieldCheck, X } from 'lucide-react';
 import { useMemo, useState, type ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { communityApi } from '../../community/api';
+import { copyShareLink, shareLink } from '../../community/share';
 import { captureProjectThumbnail } from '../../community/thumbnail';
 import { useCurrentUser } from '../../community/useCurrentUser';
 import { BRICK_CATALOG_VERSION } from '../../config/brickConfig';
 import { useEditorStore } from '../../store/editorStore';
-import type { PublishedProject } from '../../../shared/community';
+import type { PublishedProject, PublicWork } from '../../../shared/community';
 
 export function PublishDialog({ onClose }: { onClose: () => void }) {
   const navigate = useNavigate();
@@ -15,6 +16,7 @@ export function PublishDialog({ onClose }: { onClose: () => void }) {
   const [guardianPin, setGuardianPin] = useState('');
   const [message, setMessage] = useState('');
   const [busy, setBusy] = useState(false);
+  const [publishedWork, setPublishedWork] = useState<PublicWork | null>(null);
   const bricks = useEditorStore((state) => state.bricks);
   const connections = useEditorStore((state) => state.connections);
   const provenance = useEditorStore((state) => state.provenance);
@@ -45,10 +47,38 @@ export function PublishDialog({ onClose }: { onClose: () => void }) {
         ...(provenance ? { provenance } : {}),
       };
       const work = await communityApi.publish({ title, project, thumbnail: captureProjectThumbnail(bricks), ...(needsPin ? { guardianPin } : {}) });
-      setMessage(`已发布！作品编号：${work.id.slice(0, 8)}`);
-      window.setTimeout(onClose, 900);
+      setPublishedWork(work);
+      setMessage('');
     } catch (error) { setMessage(error instanceof Error ? error.message : '发布失败，请再试一次'); }
     finally { setBusy(false); }
+  };
+
+  const publishedPath = publishedWork
+    ? `/w/${publishedWork.id}?utm_source=publish_success&utm_medium=product&utm_campaign=community`
+    : '';
+
+  const sharePublishedWork = async () => {
+    if (!publishedWork) return;
+    try {
+      const result = await shareLink({
+        title: `${publishedWork.title}｜数字积木`,
+        text: `我用数字积木搭了“${publishedWork.title}”，你也可以在这个作品上继续搭。`,
+        url: publishedPath,
+      });
+      if (result === 'copied') setMessage('作品链接已复制，可以发给朋友了。');
+    } catch {
+      setMessage('暂时无法自动分享，请使用“复制链接”。');
+    }
+  };
+
+  const copyPublishedWork = async () => {
+    if (!publishedWork) return;
+    try {
+      await copyShareLink(publishedPath);
+      setMessage('作品链接已复制。');
+    } catch {
+      setMessage('暂时无法自动复制，请打开作品后复制浏览器地址。');
+    }
   };
 
   if (loading) return <PublishModal onClose={onClose}><div className="modal-icon"><ShieldCheck size={25} /></div><h2 id="publish-title">准备发布作品</h2><p>正在确认你的登录状态…</p></PublishModal>;
@@ -64,6 +94,19 @@ export function PublishDialog({ onClose }: { onClose: () => void }) {
       <button className="community-secondary wide" type="button" onClick={() => continueAfterLogin(true)}>新用户注册</button>
       <button className="community-quiet wide" type="button" onClick={saveLocally}><Save size={17} />先保存在本机</button>
     </div>
+  </PublishModal>;
+
+  if (publishedWork) return <PublishModal onClose={onClose}>
+    <div className="modal-icon publish-success-icon"><CheckCircle2 size={27} /></div>
+    <h2 id="publish-title">作品已发布</h2>
+    <p>“{publishedWork.title}”已经出现在作品广场。现在分享出去，朋友打开链接就能直接二创。</p>
+    <img className="publish-preview" src={preview} alt={`${publishedWork.title} 作品预览`} />
+    <div className="publish-gate-actions">
+      <button className="community-primary wide" type="button" onClick={() => void sharePublishedWork()}><Share2 size={18} />分享作品</button>
+      <button className="community-secondary wide" type="button" onClick={() => navigate(publishedPath)}><ExternalLink size={18} />查看作品页</button>
+      <button className="community-quiet wide" type="button" onClick={() => void copyPublishedWork()}><Copy size={17} />复制链接</button>
+    </div>
+    {message && <p className="community-message" role="status">{message}</p>}
   </PublishModal>;
 
   return <PublishModal onClose={onClose}>

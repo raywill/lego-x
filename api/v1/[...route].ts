@@ -68,18 +68,38 @@ async function workRows(where: string, params: unknown[], limit?: number): Promi
     `SELECT w.id, w.owner_user_id, w.title, w.status, w.current_version_id, w.source_work_id, w.source_version_id,
             w.published_at, v.id AS version_id, v.project_json, v.brick_count, v.connection_count,
             p.public_id, p.nickname, sp.nickname AS source_nickname, sw.status AS source_status,
-            COALESCE(SUM(m.likes), 0) AS likes, COALESCE(SUM(m.views), 0) AS views,
-            COALESCE(SUM(m.remixes), 0) AS remixes,
-            COALESCE(SUM(POW(0.85, DATEDIFF(UTC_DATE(), m.metric_day)) * (m.views + 3 * m.likes + 5 * m.remixes)), 0) AS hot_score
+            COALESCE(l.likes, 0) AS likes, COALESCE(t.views, 0) AS views,
+            COALESCE(r.remixes, 0) AS remixes, COALESCE(h.hot_score, 0) AS hot_score
        FROM works w
        JOIN work_versions v ON v.id = w.current_version_id
        JOIN profiles p ON p.user_id = w.owner_user_id
        LEFT JOIN works sw ON sw.id = w.source_work_id
        LEFT JOIN profiles sp ON sp.user_id = sw.owner_user_id
-       LEFT JOIN work_daily_metrics m ON m.work_id = w.id AND m.metric_day >= DATE_SUB(UTC_DATE(), INTERVAL 6 DAY)
+       LEFT JOIN (
+         SELECT work_id, COUNT(*) AS likes
+           FROM likes
+          GROUP BY work_id
+       ) l ON l.work_id = w.id
+       LEFT JOIN (
+         SELECT work_id, SUM(views) AS views
+           FROM work_daily_metrics
+          GROUP BY work_id
+       ) t ON t.work_id = w.id
+       LEFT JOIN (
+         SELECT source_work_id AS work_id, COUNT(*) AS remixes
+           FROM works
+          WHERE source_work_id IS NOT NULL AND status = 'published'
+          GROUP BY source_work_id
+       ) r ON r.work_id = w.id
+       LEFT JOIN (
+         SELECT work_id,
+                SUM(POW(0.85, DATEDIFF(UTC_DATE(), metric_day)) * (views + 3 * likes + 5 * remixes)) AS hot_score
+           FROM work_daily_metrics
+          WHERE metric_day >= DATE_SUB(UTC_DATE(), INTERVAL 6 DAY)
+          GROUP BY work_id
+       ) h ON h.work_id = w.id
       WHERE ${where}
-      GROUP BY w.id, v.id, p.public_id, p.nickname, sp.nickname, sw.status
-      ORDER BY hot_score DESC, w.published_at DESC${suffix}`,
+      ORDER BY h.hot_score DESC, w.published_at DESC${suffix}`,
     params,
   );
   return rows;
@@ -108,6 +128,9 @@ async function currentUser(request: VercelRequest): Promise<CurrentUser | null> 
 }
 
 async function recordWorkView(workId: string, request: VercelRequest, response: VercelResponse): Promise<void> {
+  const rawUserAgent = request.headers['user-agent'];
+  const userAgent = Array.isArray(rawUserAgent) ? rawUserAgent.join(' ') : rawUserAgent || '';
+  if (!userAgent || /bot|crawler|spider|slurp|preview|facebookexternalhit|whatsapp|telegram|discord|curl|wget|python-requests|httpclient/i.test(userAgent)) return;
   const visitor = getCookie(request, 'lx_visitor') || randomBytes(18).toString('base64url');
   if (!getCookie(request, 'lx_visitor')) setCookie(response, 'lx_visitor', visitor, 60 * 60 * 24 * 365);
   const visitorHash = createHmac('sha256', process.env.ACCOUNT_CONTEXT_SECRET || 'dev').update(visitor).digest('hex');
@@ -288,9 +311,13 @@ async function handleWorks(request: VercelRequest, response: VercelResponse, rou
     sendJson(response, 200, { reported: true }); return true;
   }
   if (route[0] === 'works' && route[1] && route[2] === 'remix' && request.method === 'GET') {
-    const session = await requireSession(request, response); if (!session) return true;
-    const work = await getWork(route[1], session.user.id);
+    const viewer = await currentUser(request);
+    const work = await getWork(route[1], viewer?.userId);
     if (!work) { sendError(response, 404, '作品不存在或已经下架'); return true; }
+    work.project = {
+      ...work.project,
+      provenance: { sourceWorkId: work.id, sourceVersionId: work.versionId },
+    };
     sendJson(response, 200, work); return true;
   }
   if (route[0] === 'works' && route[1] && route[2] === 'unpublish' && request.method === 'POST') {

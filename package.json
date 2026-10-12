@@ -9,7 +9,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "start:ecs": "tsx server/ecs.ts",
-    "db:migrate": "tsx server/migrate.ts"
+    "db:migrate": "tsx server/migrate.ts",
+    "seo:submit": "node scripts/submit-indexnow.mjs"
   },
   "dependencies": {
     "@better-auth/passkey": "^1.7.7",

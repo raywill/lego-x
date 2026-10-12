@@ -4,12 +4,58 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="theme-color" content="#6757e8" />
-    <meta name="description" content="面向儿童的数字积木 3D 搭建工具" />
+    <meta name="description" content="在浏览器里像搭积木一样完成 3D 创作：拖拽吸附、AI 生成 .legox、一键导出 STL，并在作品广场分享和二创。无需安装。" />
+    <meta name="robots" content="index, follow, max-image-preview:large" />
+    <meta property="og:type" content="website" />
+    <meta property="og:locale" content="zh_CN" />
+    <meta property="og:site_name" content="数字积木 · Digital Bricks" />
+    <meta property="og:title" content="数字积木 Digital Bricks｜从第一块开始 3D 创作" />
+    <meta property="og:description" content="浏览器里的儿童友好 3D 积木工具：自由搭建、AI 辅助生成作品文件、一键导出 STL，还能分享和二创。" />
+    <meta property="og:url" content="https://bricks.reactshare.cn/" />
+    <meta property="og:image" content="https://bricks.reactshare.cn/social-preview.png" />
+    <meta property="og:image:width" content="1672" />
+    <meta property="og:image:height" content="941" />
+    <meta property="og:image:alt" content="数字积木 Digital Bricks 在线 3D 创作工具" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="数字积木 Digital Bricks｜从第一块开始 3D 创作" />
+    <meta name="twitter:description" content="浏览器里的儿童友好 3D 积木工具：自由搭建、AI 辅助生成作品文件、一键导出 STL。" />
+    <meta name="twitter:image" content="https://bricks.reactshare.cn/social-preview.png" />
+    <meta name="twitter:image:alt" content="数字积木 Digital Bricks 在线 3D 创作工具" />
+    <link rel="canonical" href="https://bricks.reactshare.cn/" />
+    <link rel="manifest" href="/manifest.webmanifest" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <title>数字积木 · Digital Bricks</title>
+    <title>数字积木 Digital Bricks｜在线 3D 积木建模与 STL 导出</title>
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "WebApplication",
+        "name": "数字积木 · Digital Bricks",
+        "url": "https://bricks.reactshare.cn/",
+        "applicationCategory": "DesignApplication",
+        "operatingSystem": "Web",
+        "inLanguage": "zh-CN",
+        "isAccessibleForFree": true,
+        "description": "儿童友好的浏览器 3D 积木建模工具，支持拖拽吸附、作品分享、AI 生成 .legox 文件导入和 STL 导出。",
+        "image": "https://bricks.reactshare.cn/social-preview.png",
+        "featureList": [
+          "浏览器 3D 积木搭建",
+          "自动吸附与重力落位",
+          "AI 生成 .legox 作品文件",
+          "一键导出 STL",
+          "作品广场与署名二创"
+        ]
+      }
+    </script>
   </head>
   <body>
     <div id="root"></div>
+    <noscript>
+      <main>
+        <h1>数字积木 · Digital Bricks</h1>
+        <p>一个无需安装的在线 3D 积木创作工具。请启用 JavaScript 进入编辑器，或先浏览作品介绍。</p>
+        <p><a href="/plaza">作品广场</a> · <a href="/privacy.html">数据与隐私说明</a></p>
+      </main>
+    </noscript>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
