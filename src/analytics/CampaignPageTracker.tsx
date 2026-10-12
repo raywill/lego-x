@@ -100,6 +100,7 @@ export function trackCampaignNavigation(destination: string, from: CampaignRoute
     const stored = readState();
     const storedIsFresh = Boolean(stored.previousAt && now - stored.previousAt <= TRANSITION_WINDOW_MS);
     const activeStored: CampaignState = storedIsFresh ? stored : {};
+    const validFrom = storedIsFresh && activeStored.previousRoute === from ? from : undefined;
     const query = target.searchParams;
     const attribution: Attribution = {
       source: safeValue(query.get('utm_source'), 64) || activeStored.source,
@@ -110,7 +111,7 @@ export function trackCampaignNavigation(destination: string, from: CampaignRoute
     };
 
     lastReportedPathname = target.pathname;
-    postPageView(route, from, attribution);
+    postPageView(route, validFrom, attribution);
     writeState({ ...attribution, previousRoute: route, previousAt: now });
   } catch {
     // Campaign measurement must never block navigation.
