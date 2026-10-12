@@ -6,7 +6,7 @@ export interface ShareDetails {
 
 export type ShareResult = 'shared' | 'copied' | 'cancelled';
 
-function copyWithFallback(text: string) {
+function copyWithFallback(text: string, errorMessage: string) {
   const textarea = document.createElement('textarea');
   textarea.value = text;
   textarea.setAttribute('readonly', '');
@@ -16,19 +16,19 @@ function copyWithFallback(text: string) {
   textarea.select();
   const copied = document.execCommand('copy');
   textarea.remove();
-  if (!copied) throw new Error('无法复制链接');
+  if (!copied) throw new Error(errorMessage);
 }
 
-export async function copyShareLink(url: string): Promise<void> {
+export async function copyShareLink(url: string, errorMessage = 'Unable to copy link'): Promise<void> {
   const absoluteUrl = new URL(url, window.location.origin).toString();
   if (navigator.clipboard?.writeText) {
     await navigator.clipboard.writeText(absoluteUrl);
     return;
   }
-  copyWithFallback(absoluteUrl);
+  copyWithFallback(absoluteUrl, errorMessage);
 }
 
-export async function shareLink(details: ShareDetails): Promise<ShareResult> {
+export async function shareLink(details: ShareDetails, copyErrorMessage = 'Unable to copy link'): Promise<ShareResult> {
   const payload = { ...details, url: new URL(details.url, window.location.origin).toString() };
   if (navigator.share) {
     try {
@@ -38,6 +38,6 @@ export async function shareLink(details: ShareDetails): Promise<ShareResult> {
       if (error instanceof DOMException && error.name === 'AbortError') return 'cancelled';
     }
   }
-  await copyShareLink(payload.url);
+  await copyShareLink(payload.url, copyErrorMessage);
   return 'copied';
 }

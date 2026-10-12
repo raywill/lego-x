@@ -3,6 +3,7 @@ import { useCallback } from 'react';
 import type { ThreeEvent } from '@react-three/fiber';
 import { useEditorStore } from '../../store/editorStore';
 import type { BrickInstance } from '../../types/model';
+import { currentLocale, tr } from '../../i18n/locale';
 import { BrickObject } from './BrickObject';
 import { CameraRig, type CameraView } from './CameraRig';
 import { DragInteraction } from './DragInteraction';
@@ -121,9 +122,10 @@ function SceneContents({ view, resetKey }: { view: CameraView; resetKey: number 
 
 export function BrickScene({ view, resetKey }: { view: CameraView; resetKey: number }) {
   const selectBrick = useEditorStore((state) => state.selectBrick);
+  const locale = currentLocale();
   return (
     <Canvas
-      aria-label="3D 搭建区"
+      aria-label={tr(locale, '3D 搭建区', '3D building canvas')}
       tabIndex={0}
       shadows="basic"
       dpr={[1, 1.75]}

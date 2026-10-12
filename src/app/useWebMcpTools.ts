@@ -1,9 +1,22 @@
 import { useEffect } from 'react';
 import { BRICK_DEFINITIONS, getBrickDefinition } from '../bricks/catalog';
 import { getBrickGroundY } from '../bricks/geometry';
+import { getBrickDisplayName } from '../i18n/brickNames';
+import { tr, useLocale } from '../i18n/locale';
 import { useEditorStore } from '../store/editorStore';
+import type { BrickCategory } from '../types/model';
+
+const englishCategories: Record<BrickCategory, string> = {
+  blocks: 'Blocks & plates',
+  round: 'Round',
+  slopes: 'Slopes & triangles',
+  curves: 'Curves',
+  frames: 'Frames & corners',
+  mechanical: 'Moving parts',
+};
 
 export function useWebMcpTools(): void {
+  const locale = useLocale();
   useEffect(() => {
     const context = document.modelContext;
     if (!context?.registerTool) return;
@@ -18,18 +31,23 @@ export function useWebMcpTools(): void {
 
     register({
       name: 'list_brick_types',
-      title: '查看积木种类',
+      title: tr(locale, '查看积木种类', 'List brick types'),
       description: 'List the generic construction brick types available in the Digital Bricks palette.',
       inputSchema: { type: 'object', properties: {}, additionalProperties: false },
       annotations: { readOnlyHint: true, untrustedContentHint: false },
       execute: () => ({
-        bricks: BRICK_DEFINITIONS.map(({ id, name, category, size }) => ({ id, name, category, sizeMm: size })),
+        bricks: BRICK_DEFINITIONS.map((definition) => ({
+          id: definition.id,
+          name: getBrickDisplayName(definition, locale),
+          category: locale === 'en' ? englishCategories[definition.category] : definition.category,
+          sizeMm: definition.size,
+        })),
       }),
     });
 
     register({
       name: 'get_project_summary',
-      title: '查看当前作品',
+      title: tr(locale, '查看当前作品', 'Inspect current build'),
       description: 'Read the current Digital Bricks project summary without changing it.',
       inputSchema: { type: 'object', properties: {}, additionalProperties: false },
       annotations: { readOnlyHint: true, untrustedContentHint: false },
@@ -41,7 +59,7 @@ export function useWebMcpTools(): void {
 
     register({
       name: 'add_brick_to_project',
-      title: '添加一个积木',
+      title: tr(locale, '添加一个积木', 'Add a brick'),
       description: 'Add one named generic brick to the visible Digital Bricks project, placed safely on the print bed.',
       inputSchema: {
         type: 'object',
@@ -66,5 +84,5 @@ export function useWebMcpTools(): void {
     });
 
     return () => lifecycle.abort();
-  }, []);
+  }, [locale]);
 }

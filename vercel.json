@@ -6,6 +6,18 @@
   "rewrites": [
     { "source": "/api/auth/(.*)", "destination": "/api/auth-handler?path=$1" },
     { "source": "/api/v1/(.*)", "destination": "/api/community?route=$1" },
+    { "source": "/en/start", "destination": "/en/start/index.html" },
+    { "source": "/en/start/", "destination": "/en/start/index.html" },
+    { "source": "/en", "destination": "/en/index.html" },
+    { "source": "/en/", "destination": "/en/index.html" },
+    { "source": "/en/build", "destination": "/en/index.html" },
+    { "source": "/en/build/", "destination": "/en/index.html" },
+    { "source": "/en/plaza", "destination": "/en/index.html" },
+    { "source": "/en/plaza/", "destination": "/en/index.html" },
+    { "source": "/en/account", "destination": "/en/index.html" },
+    { "source": "/en/account/", "destination": "/en/index.html" },
+    { "source": "/en/w/(.*)", "destination": "/en/index.html" },
+    { "source": "/en/u/(.*)", "destination": "/en/index.html" },
     { "source": "/(.*)", "destination": "/index.html" }
   ]
 }

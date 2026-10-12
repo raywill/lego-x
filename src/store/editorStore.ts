@@ -6,6 +6,7 @@ import {
 } from '../config/brickConfig';
 import { getBrickDefinition } from '../bricks/catalog';
 import { getBrickGroundY } from '../bricks/geometry';
+import { currentLocale, tr } from '../i18n/locale';
 import {
   brickPairKey,
   findNearestFreeGridPlacement,
@@ -55,6 +56,10 @@ import type {
 export type RotationDirection = 'left' | 'right' | -1 | 1;
 export type FlipDirection = 'up' | 'down';
 export type DragPlacementMode = 'insert' | 'top';
+
+function editorText(zh: string, en: string): string {
+  return tr(currentLocale(), zh, en);
+}
 
 export interface DragPlacementOption {
   preview: BrickInstance;
@@ -355,7 +360,7 @@ export const useEditorStore = create<EditorStore>((set, get) => ({
   addBrick: (definitionId, position, rotation = [0, 0, 0], color) => {
     const definition = getBrickDefinition(definitionId);
     if (!definition) {
-      set({ toast: '找不到这个积木' });
+      set({ toast: editorText('找不到这个积木', 'This brick could not be found.') });
       return null;
     }
 
@@ -436,7 +441,7 @@ export const useEditorStore = create<EditorStore>((set, get) => ({
     );
     set({
       groupCopy: { bricks: copies, connections: duplicated.connections },
-      toast: '移动整组副本，点击放下',
+      toast: editorText('移动整组副本，点击放下', 'Move the copied group, then click to place it.'),
     });
     return true;
   },
@@ -452,7 +457,7 @@ export const useEditorStore = create<EditorStore>((set, get) => ({
     if (bricks.length === 0) return false;
     set({
       groupMove: { bricks, sourceIds: bricks.map((brick) => brick.id) },
-      toast: '移动整组，点击放下',
+      toast: editorText('移动整组，点击放下', 'Move the group, then click to place it.'),
     });
     return true;
   },
@@ -496,7 +501,10 @@ export const useEditorStore = create<EditorStore>((set, get) => ({
             multiSelectMode: true,
             groupCopy: null,
             groupMove: null,
-            toast: `已复制 ${copiedIds.length} 块积木`,
+            toast: editorText(
+              `已复制 ${copiedIds.length} 块积木`,
+              `Copied ${copiedIds.length} brick${copiedIds.length === 1 ? '' : 's'}.`,
+            ),
           },
         );
       }
@@ -520,7 +528,10 @@ export const useEditorStore = create<EditorStore>((set, get) => ({
         selectedIds: sourceIds,
         multiSelectMode: true,
         groupMove: null,
-        toast: `已移动 ${sourceIds.length} 块积木`,
+        toast: editorText(
+          `已移动 ${sourceIds.length} 块积木`,
+          `Moved ${sourceIds.length} brick${sourceIds.length === 1 ? '' : 's'}.`,
+        ),
       });
     });
   },
@@ -577,7 +588,7 @@ export const useEditorStore = create<EditorStore>((set, get) => ({
       if (selected.length === 0) return state;
       const obstacles = state.bricks.filter((brick) => !selectedIds.has(brick.id));
       const result = findNextLowerSelectionPlacement(selected, obstacles);
-      if (!result) return { toast: '下面没有能放下的空间了' };
+      if (!result) return { toast: editorText('下面没有能放下的空间了', 'There is no room to move the selection lower.') };
 
       moved = true;
       const loweredById = new Map(result.bricks.map((brick) => [brick.id, brick]));
@@ -592,8 +603,11 @@ export const useEditorStore = create<EditorStore>((set, get) => ({
         selectedIds: ids,
         multiSelectMode: state.multiSelectMode,
         toast: result.descendedLayers === 1
-          ? '向下移动了一层'
-          : `已切换到下方 ${result.descendedLayers} 层的位置`,
+          ? editorText('向下移动了一层', 'Moved down one layer.')
+          : editorText(
+              `已切换到下方 ${result.descendedLayers} 层的位置`,
+              `Moved down ${result.descendedLayers} layers.`,
+            ),
       });
     });
     return moved;
@@ -613,7 +627,7 @@ export const useEditorStore = create<EditorStore>((set, get) => ({
         directionMultiplier as QuarterTurnDirection,
       );
       if (!rotated) {
-        return { toast: '这里空间不够，积木转不过去' };
+        return { toast: editorText('这里空间不够，积木转不过去', 'There is not enough room to rotate this brick.') };
       }
       const bricks = state.bricks.map((brick): BrickInstance =>
         brick.id === selectedId ? rotated : cloneBrick(brick));
@@ -641,7 +655,7 @@ export const useEditorStore = create<EditorStore>((set, get) => ({
         direction === 'up' ? 1 : -1,
       );
       if (!flipped) {
-        return { toast: '这里空间不够，积木翻不过去' };
+        return { toast: editorText('这里空间不够，积木翻不过去', 'There is not enough room to flip this brick.') };
       }
       const bricks = state.bricks.map((brick): BrickInstance => (
         brick.id === selectedId ? flipped : cloneBrick(brick)
@@ -668,13 +682,13 @@ export const useEditorStore = create<EditorStore>((set, get) => ({
         MAX_AUTO_CLIMB_LAYERS,
         occupiedConnectorKeysExcludingBrick(state.connections, selected.id),
       );
-      if (!result) return { toast: '这个方向被挡住了，积木过不去' };
+      if (!result) return { toast: editorText('这个方向被挡住了，积木过不去', 'This direction is blocked.') };
       const bricks = state.bricks.map((brick) =>
         brick.id === selected.id ? cloneBrick(result.brick) : cloneBrick(brick));
       const connections = removeConnectionsForBrick(state.connections, selected.id);
       if (result.wallConnection) {
         if (!validConnection(result.wallConnection, bricks, selected.id, connections)) {
-          return { toast: '墙面连接点已经被占用了' };
+          return { toast: editorText('墙面连接点已经被占用了', 'The wall connector is already occupied.') };
         }
         connections.push({ ...result.wallConnection });
       }
@@ -687,9 +701,12 @@ export const useEditorStore = create<EditorStore>((set, get) => ({
           selectedId: selected.id,
           selectedIds: [selected.id],
           toast: result.kind === 'wall-climb'
-            ? '贴着墙向上移动了一层'
+            ? editorText('贴着墙向上移动了一层', 'Moved up one layer along the wall.')
             : result.climbedLayers > 0
-              ? `自动向上跨了 ${result.climbedLayers} 层`
+              ? editorText(
+                  `自动向上跨了 ${result.climbedLayers} 层`,
+                  `Automatically climbed ${result.climbedLayers} layer${result.climbedLayers === 1 ? '' : 's'}.`,
+                )
               : null,
         },
       );
@@ -840,10 +857,10 @@ export const useEditorStore = create<EditorStore>((set, get) => ({
       if (typeof localStorage === 'undefined') throw new Error('Storage is unavailable.');
       const state = get();
       localStorage.setItem(PROJECT_STORAGE_KEY, serializeProject(snapshotOf(state)));
-      set({ toast: '作品已保存' });
+      set({ toast: editorText('作品已保存', 'Project saved.') });
       return true;
     } catch {
-      set({ toast: '保存失败，请检查浏览器存储设置' });
+      set({ toast: editorText('保存失败，请检查浏览器存储设置', 'Could not save the project. Check your browser storage settings.') });
       return false;
     }
   },
@@ -853,14 +870,14 @@ export const useEditorStore = create<EditorStore>((set, get) => ({
       if (typeof localStorage === 'undefined') throw new Error('Storage is unavailable.');
       const serialized = localStorage.getItem(PROJECT_STORAGE_KEY);
       if (serialized === null) {
-        set({ toast: '还没有保存的作品' });
+        set({ toast: editorText('还没有保存的作品', 'There is no saved project yet.') });
         return false;
       }
       const loaded = get().importProject(serialized);
-      if (loaded) set({ toast: '作品已载入' });
+      if (loaded) set({ toast: editorText('作品已载入', 'Project loaded.') });
       return loaded;
     } catch {
-      set({ toast: '载入失败，保存的数据可能已损坏' });
+      set({ toast: editorText('载入失败，保存的数据可能已损坏', 'Could not load the project. The saved data may be corrupted.') });
       return false;
     }
   },
@@ -881,13 +898,13 @@ export const useEditorStore = create<EditorStore>((set, get) => ({
             multiSelectMode: false,
             groupCopy: null,
             groupMove: null,
-            toast: '作品文件已打开',
+            toast: editorText('作品文件已打开', 'Project file opened.'),
           },
         ),
       );
       return true;
     } catch {
-      set({ toast: '无法打开：这不是有效的 .legox 作品文件' });
+      set({ toast: editorText('无法打开：这不是有效的 .legox 作品文件', 'Unable to open this file: it is not a valid .legox project.') });
       return false;
     }
   },
@@ -896,7 +913,7 @@ export const useEditorStore = create<EditorStore>((set, get) => ({
     if (get().drag || get().groupCopy || get().groupMove) return;
     const definition = getBrickDefinition(definitionId);
     if (!definition) {
-      set({ toast: '找不到这个积木' });
+      set({ toast: editorText('找不到这个积木', 'This brick could not be found.') });
       return;
     }
     const brickId = makeBrickId();
@@ -1057,7 +1074,7 @@ export const useEditorStore = create<EditorStore>((set, get) => ({
           drag: null,
           selectedId: drag.source === 'brick' ? drag.brickId : state.selectedId,
           selectedIds: drag.source === 'brick' ? [drag.brickId] : state.selectedIds,
-          toast: '积木不能互相穿过，请换一个位置',
+          toast: editorText('积木不能互相穿过，请换一个位置', 'Bricks cannot pass through each other. Choose another position.'),
         };
       }
 

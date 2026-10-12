@@ -22,6 +22,7 @@ import { getBrickDefinition } from '../bricks/catalog';
 import { createBrickGroup } from '../bricks/geometry';
 import { snapBrickToGrid } from '../editor/grid/gridEngine';
 import { getWorldConnectors } from '../editor/snapping/snapEngine';
+import { currentLocale, tr } from '../i18n/locale';
 import type { BrickInstance, Connection } from '../types/model';
 
 const MANIFOLD_WELD_TOLERANCE_MM = 1e-5;
@@ -166,7 +167,7 @@ function geometryToManifold(
     const position = welded.getAttribute('position');
     const index = welded.getIndex();
     if (!position || position.itemSize !== 3 || !index) {
-      throw new Error('积木包含无法转换为实体的几何');
+      throw new Error(tr(currentLocale(), '积木包含无法转换为实体的几何', 'A brick contains geometry that cannot be converted to a solid'));
     }
 
     const vertProperties = new Float32Array(position.count * 3);
@@ -215,7 +216,7 @@ function triangleSoupGeometry(sources: readonly BufferGeometry[]): BufferGeometr
       const position = geometry.getAttribute('position');
       return total + (position?.count ?? 0);
     }, 0);
-    if (vertexCount < 3) throw new Error('积木没有可导出的三角面');
+    if (vertexCount < 3) throw new Error(tr(currentLocale(), '积木没有可导出的三角面', 'The bricks do not contain any exportable triangles'));
 
     const positions = new Float32Array(vertexCount * 3);
     let target = 0;
@@ -259,7 +260,7 @@ async function buildUnionGeometry(
       const worldGeometry = child.geometry.clone().applyMatrix4(child.matrixWorld);
       worldGeometries.push(worldGeometry);
     });
-    if (worldGeometries.length === 0) throw new Error('场景里还没有可打印的积木');
+    if (worldGeometries.length === 0) throw new Error(tr(currentLocale(), '场景里还没有可打印的积木', 'There are no printable bricks in the scene yet'));
 
     const module = await getManifoldModule();
     for (const worldGeometry of worldGeometries) {
@@ -287,10 +288,10 @@ async function buildUnionGeometry(
       if (worldGeometries.length) return triangleSoupGeometry(worldGeometries);
     } catch (fallbackError) {
       const message = fallbackError instanceof Error ? fallbackError.message : String(fallbackError);
-      throw new Error(`无法生成打印实体：${message}`);
+      throw new Error(tr(currentLocale(), `无法生成打印实体：${message}`, `Unable to create a printable solid: ${message}`));
     }
     const message = error instanceof Error ? error.message : String(error);
-    throw new Error(`无法生成打印实体：${message}`);
+    throw new Error(tr(currentLocale(), `无法生成打印实体：${message}`, `Unable to create a printable solid: ${message}`));
   } finally {
     solids.forEach((solid) => solid.delete());
     worldGeometries.forEach((geometry) => geometry.dispose());
@@ -303,14 +304,14 @@ export async function buildBinaryStl(
   scale = 1,
   connections: readonly Connection[] = [],
 ): Promise<ArrayBuffer> {
-  if (!bricks.length) throw new Error('场景里还没有积木');
-  if (!Number.isFinite(scale) || scale <= 0) throw new Error('打印比例必须大于 0');
+  if (!bricks.length) throw new Error(tr(currentLocale(), '场景里还没有积木', 'There are no bricks in the scene yet'));
+  if (!Number.isFinite(scale) || scale <= 0) throw new Error(tr(currentLocale(), '打印比例必须大于 0', 'The print scale must be greater than 0'));
 
   const geometry = await buildUnionGeometry(bricks, connections);
   geometry.scale(scale, scale, scale);
   if (!hasTriangles(geometry)) {
     geometry.dispose();
-    throw new Error('打印文件没有包含任何实体，请检查作品后重试');
+    throw new Error(tr(currentLocale(), '打印文件没有包含任何实体，请检查作品后重试', 'The print file contains no solids. Check the project and try again.'));
   }
   const material = new MeshStandardMaterial();
   const printableMesh = new Mesh(geometry, material);
@@ -322,10 +323,10 @@ export async function buildBinaryStl(
       data.byteOffset,
       data.byteOffset + data.byteLength,
     ) as ArrayBuffer;
-    if (buffer.byteLength < 84) throw new Error('生成的 STL 文件不完整');
+    if (buffer.byteLength < 84) throw new Error(tr(currentLocale(), '生成的 STL 文件不完整', 'The generated STL file is incomplete'));
     const triangleCount = new DataView(buffer).getUint32(80, true);
     if (triangleCount === 0 || buffer.byteLength !== 84 + triangleCount * 50) {
-      throw new Error('生成的 STL 文件没有包含可打印实体');
+      throw new Error(tr(currentLocale(), '生成的 STL 文件没有包含可打印实体', 'The generated STL file contains no printable solids'));
     }
     return buffer;
   } finally {
@@ -336,7 +337,7 @@ export async function buildBinaryStl(
 
 export async function downloadStl(
   bricks: BrickInstance[],
-  filename = '我的数字积木.stl',
+  filename = tr(currentLocale(), '我的数字积木.stl', 'my-digital-bricks.stl'),
   scale = 1,
   connections: readonly Connection[] = [],
 ): Promise<void> {

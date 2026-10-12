@@ -1,5 +1,7 @@
 # 数字积木 · Digital Bricks
 
+**[English README](./README.en.md)** · **[English live demo](https://bricks.reactshare.cn/en/start?utm_source=github&utm_medium=referral&utm_campaign=launch_202610&utm_content=github_readme)**
+
 给孩子、家长和创客使用的浏览器 3D 积木工具。拖入积木后会自动落位和卡接，完成的作品可以保存为 `.legox`、发布到作品广场，或导出无内部接缝的 STL 去 3D 打印。
 
 **[在线体验](https://bricks.reactshare.cn/start?utm_source=github&utm_medium=referral&utm_campaign=launch_202610)** · [直接开始搭建](https://bricks.reactshare.cn/build?utm_source=github&utm_medium=referral&utm_campaign=launch_202610) · [浏览作品广场](https://bricks.reactshare.cn/plaza?utm_source=github&utm_medium=referral&utm_campaign=launch_202610)

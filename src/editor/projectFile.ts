@@ -1,9 +1,19 @@
 import type { ProjectSnapshot } from '../types/model';
+import { currentLocale, tr } from '../i18n/locale';
 import { serializeProject } from './projectModel';
 
 export const LEGOX_FILE_EXTENSION = '.legox';
 export const LEGOX_MIME_TYPE = 'application/x-legox+json';
-export const LEGOX_DEFAULT_FILENAME = `我的数字积木${LEGOX_FILE_EXTENSION}`;
+
+export function getLegoxDefaultFilename(): string {
+  return tr(
+    currentLocale(),
+    `我的数字积木${LEGOX_FILE_EXTENSION}`,
+    `my-digital-bricks${LEGOX_FILE_EXTENSION}`,
+  );
+}
+
+export const LEGOX_DEFAULT_FILENAME = getLegoxDefaultFilename();
 
 interface LegoxWritableFile {
   write(data: Blob): Promise<void>;
@@ -34,7 +44,7 @@ export function isLegoxFilename(filename: string): boolean {
 }
 
 export function withLegoxExtension(filename: string): string {
-  const trimmed = filename.trim() || LEGOX_DEFAULT_FILENAME;
+  const trimmed = filename.trim() || getLegoxDefaultFilename();
   return isLegoxFilename(trimmed) ? trimmed : `${trimmed}${LEGOX_FILE_EXTENSION}`;
 }
 
@@ -56,7 +66,7 @@ export function isSavePickerCancellation(error: unknown): boolean {
 
 export function downloadLegoxFile(
   project: ProjectSnapshot,
-  filename = LEGOX_DEFAULT_FILENAME,
+  filename = getLegoxDefaultFilename(),
 ): void {
   const safeFilename = withLegoxExtension(filename);
   const blob = createLegoxBlob(project);
@@ -77,7 +87,7 @@ export function downloadLegoxFile(
  */
 export async function saveLegoxFile(
   project: ProjectSnapshot,
-  filename = LEGOX_DEFAULT_FILENAME,
+  filename = getLegoxDefaultFilename(),
 ): Promise<LegoxSaveMethod> {
   const safeFilename = withLegoxExtension(filename);
   const picker = typeof window === 'undefined'
@@ -91,7 +101,7 @@ export async function saveLegoxFile(
   const handle = await picker.call(window, {
     suggestedName: safeFilename,
     types: [{
-      description: 'LEGOX 数字积木作品',
+      description: tr(currentLocale(), 'LEGOX 数字积木作品', 'LEGOX Digital Bricks project'),
       accept: { [LEGOX_MIME_TYPE]: [LEGOX_FILE_EXTENSION] },
     }],
   });

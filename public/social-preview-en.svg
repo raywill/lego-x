@@ -1,0 +1,98 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#f5f3ff"/>
+      <stop offset="0.52" stop-color="#e8ebff"/>
+      <stop offset="1" stop-color="#dcecff"/>
+    </linearGradient>
+    <linearGradient id="purple" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#7c6df0"/>
+      <stop offset="1" stop-color="#5144c6"/>
+    </linearGradient>
+    <linearGradient id="orange" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#ffb24d"/>
+      <stop offset="1" stop-color="#f27a32"/>
+    </linearGradient>
+    <filter id="shadow" x="-30%" y="-30%" width="160%" height="180%">
+      <feDropShadow dx="0" dy="18" stdDeviation="18" flood-color="#40358d" flood-opacity=".22"/>
+    </filter>
+    <pattern id="grid" width="34" height="34" patternUnits="userSpaceOnUse">
+      <path d="M34 0H0V34" fill="none" stroke="#6757e8" stroke-opacity=".075"/>
+    </pattern>
+  </defs>
+
+  <rect width="1200" height="630" rx="0" fill="url(#bg)"/>
+  <rect width="1200" height="630" fill="url(#grid)"/>
+  <circle cx="1072" cy="78" r="190" fill="#8ad9cd" opacity=".28"/>
+  <circle cx="1118" cy="582" r="240" fill="#ffb85e" opacity=".22"/>
+
+  <g transform="translate(72 68)">
+    <g transform="translate(0 2)">
+      <rect width="58" height="58" rx="15" fill="url(#purple)"/>
+      <circle cx="19" cy="20" r="7" fill="#fff" opacity=".96"/>
+      <circle cx="39" cy="20" r="7" fill="#fff" opacity=".82"/>
+      <circle cx="29" cy="39" r="7" fill="#fff" opacity=".9"/>
+    </g>
+    <text x="78" y="38" fill="#393352" font-family="Inter, system-ui, -apple-system, sans-serif" font-size="27" font-weight="800" letter-spacing="-.5">Digital Bricks</text>
+    <rect x="302" y="8" width="126" height="38" rx="19" fill="#fff" stroke="#cbc7ee"/>
+    <text x="365" y="33" text-anchor="middle" fill="#5144c6" font-family="Inter, system-ui, sans-serif" font-size="14" font-weight="750">OPEN SOURCE</text>
+  </g>
+
+  <g transform="translate(72 184)">
+    <text x="0" y="0" fill="#241e42" font-family="Inter, system-ui, -apple-system, sans-serif" font-size="70" font-weight="850" letter-spacing="-3">
+      <tspan x="0" dy="0">Build ideas.</tspan>
+      <tspan x="0" dy="79">Print them.</tspan>
+    </text>
+    <text x="3" y="198" fill="#655e78" font-family="Inter, system-ui, -apple-system, sans-serif" font-size="25" font-weight="520">A browser-based 3D builder with</text>
+    <text x="3" y="232" fill="#655e78" font-family="Inter, system-ui, -apple-system, sans-serif" font-size="25" font-weight="520">snap placement and watertight STL export.</text>
+    <g transform="translate(0 274)">
+      <rect width="142" height="48" rx="24" fill="#6757e8"/>
+      <text x="71" y="31" text-anchor="middle" fill="#fff" font-family="Inter, system-ui, sans-serif" font-size="17" font-weight="760">BUILD</text>
+      <rect x="154" width="142" height="48" rx="24" fill="#fff" stroke="#c8c4e4"/>
+      <text x="225" y="31" text-anchor="middle" fill="#5144c6" font-family="Inter, system-ui, sans-serif" font-size="17" font-weight="760">SNAP</text>
+      <rect x="308" width="178" height="48" rx="24" fill="#fff" stroke="#c8c4e4"/>
+      <text x="397" y="31" text-anchor="middle" fill="#5144c6" font-family="Inter, system-ui, sans-serif" font-size="17" font-weight="760">EXPORT STL</text>
+    </g>
+  </g>
+
+  <g transform="translate(720 126)" filter="url(#shadow)">
+    <path d="M42 206L211 108L393 210L221 310Z" fill="#c7c8e7"/>
+    <path d="M42 206V276L221 380V310Z" fill="#a6a7d5"/>
+    <path d="M393 210V280L221 380V310Z" fill="#8b8bc5"/>
+
+    <g transform="translate(69 129)">
+      <path d="M0 78L105 17L218 80L110 143Z" fill="#ffca68"/>
+      <path d="M0 78V160L110 224V143Z" fill="#f39843"/>
+      <path d="M218 80V162L110 224V143Z" fill="#dd6f31"/>
+      <g fill="#ffe3a2">
+        <ellipse cx="53" cy="58" rx="21" ry="12"/>
+        <ellipse cx="108" cy="27" rx="21" ry="12"/>
+        <ellipse cx="111" cy="90" rx="21" ry="12"/>
+        <ellipse cx="165" cy="59" rx="21" ry="12"/>
+      </g>
+    </g>
+
+    <g transform="translate(166 0)">
+      <path d="M0 74L86 24L178 75L89 127Z" fill="#8b80f6"/>
+      <path d="M0 74V148L89 200V127Z" fill="#6757e8"/>
+      <path d="M178 75V149L89 200V127Z" fill="#4c3eb7"/>
+      <g fill="#bbb3ff">
+        <ellipse cx="44" cy="56" rx="18" ry="10"/>
+        <ellipse cx="89" cy="30" rx="18" ry="10"/>
+        <ellipse cx="90" cy="82" rx="18" ry="10"/>
+        <ellipse cx="134" cy="56" rx="18" ry="10"/>
+      </g>
+    </g>
+
+    <g transform="translate(215 226)">
+      <path d="M0 49L69 9L142 50L71 91Z" fill="#91e1d5"/>
+      <path d="M0 49V101L71 142V91Z" fill="#5fc6bb"/>
+      <path d="M142 50V102L71 142V91Z" fill="#40a89f"/>
+      <ellipse cx="36" cy="39" rx="15" ry="9" fill="#c5f3ec"/>
+      <ellipse cx="73" cy="18" rx="15" ry="9" fill="#c5f3ec"/>
+      <ellipse cx="106" cy="39" rx="15" ry="9" fill="#c5f3ec"/>
+    </g>
+  </g>
+
+  <text x="1128" y="590" text-anchor="end" fill="#554e69" font-family="Inter, system-ui, sans-serif" font-size="17" font-weight="650">bricks.reactshare.cn</text>
+</svg>

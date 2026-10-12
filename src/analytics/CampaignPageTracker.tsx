@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
+import { stripLocalePrefix } from '../i18n/locale';
 
 type CampaignRoute = 'start' | 'build' | 'plaza' | 'work';
 
@@ -25,7 +26,7 @@ let lastReportedPathname = '';
 let isFirstPageInDocument = true;
 
 function abstractRoute(pathname: string): CampaignRoute | null {
-  const normalized = pathname.replace(/\/+$/, '') || '/';
+  const normalized = stripLocalePrefix(pathname).replace(/\/+$/, '') || '/';
   if (normalized === '/start') return 'start';
   if (normalized === '/' || normalized === '/build') return 'build';
   if (normalized === '/plaza') return 'plaza';

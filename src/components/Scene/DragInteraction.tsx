@@ -3,6 +3,7 @@ import { useEffect } from 'react';
 import { MathUtils, PerspectiveCamera, Plane, Raycaster, Vector2, Vector3 } from 'three';
 import { getBrickDefinition } from '../../bricks/catalog';
 import { BRICK_UNIT, PRINT_BED } from '../../config/brickConfig';
+import { currentLocale, tr } from '../../i18n/locale';
 import { hasBrickCollision } from '../../editor/collision/collisionEngine';
 import { computeInsertionPlacement } from '../../editor/dragging/insertionEngine';
 import { computeDropPlacement, isBrickAboveBed } from '../../editor/gravity/dropEngine';
@@ -21,6 +22,12 @@ const raycaster = new Raycaster();
 const intersection = new Vector3();
 const HOLD_LIFT = BRICK_UNIT * 1.6;
 const DROP_PROBE_Y = PRINT_BED.height * 4;
+const SNAP_TOAST_ZH = '咔哒！积木卡住了';
+const SNAP_TOAST_EN = 'Snap! Brick connected.';
+
+export function isSnapToastMessage(message: string): boolean {
+  return message === SNAP_TOAST_ZH || message === SNAP_TOAST_EN;
+}
 
 function occupiedConnectorKeys(draggedBrickId: string): Set<string> {
   const keys = new Set<string>();
@@ -296,7 +303,7 @@ export function DragInteraction() {
         if (snapped) {
           state.commitDrag();
           playSnapFeedback();
-          state.setToast('咔哒！积木卡住了');
+          state.setToast(tr(currentLocale(), SNAP_TOAST_ZH, SNAP_TOAST_EN));
         } else if (completedDrag.drop) {
           animateGravityDrop(completedDrag);
         } else {

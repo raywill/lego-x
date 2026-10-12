@@ -2,6 +2,7 @@ import { Box3, Mesh } from 'three';
 import { BRICK_CONFIG, PRINT_BED } from '../config/brickConfig';
 import { getBrickDefinition } from '../bricks/catalog';
 import { createBrickGroup } from '../bricks/geometry';
+import { currentLocale, tr, type Locale } from '../i18n/locale';
 import type { BrickInstance, Connection } from '../types/model';
 
 export type PrintWarningKind = 'outside' | 'floating' | 'overhang';
@@ -10,6 +11,17 @@ export interface PrintWarning {
   kind: PrintWarningKind;
   message: string;
   brickIds: string[];
+}
+
+export function printWarningMessage(kind: PrintWarningKind, locale: Locale = currentLocale()): string {
+  switch (kind) {
+    case 'outside':
+      return tr(locale, '有积木跑出打印区域了', 'Some bricks are outside the print area');
+    case 'floating':
+      return tr(locale, '有积木悬在空中', 'Some bricks are floating');
+    case 'overhang':
+      return tr(locale, '有些地方打印时可能需要支撑', 'Some areas may need supports when printed');
+  }
 }
 
 const BODY_CONTACT_TOLERANCE = 0.2;
@@ -120,8 +132,9 @@ export function checkPrintability(bricks: BrickInstance[], connections: Connecti
   }).map((brick) => brick.id);
 
   const warnings: PrintWarning[] = [];
-  if (outside.length) warnings.push({ kind: 'outside', message: '有积木跑出打印区域了', brickIds: outside });
-  if (floating.length) warnings.push({ kind: 'floating', message: '有积木悬在空中', brickIds: floating });
-  if (excessiveOverhang.length) warnings.push({ kind: 'overhang', message: '有些地方打印时可能需要支撑', brickIds: excessiveOverhang });
+  const locale = currentLocale();
+  if (outside.length) warnings.push({ kind: 'outside', message: printWarningMessage('outside', locale), brickIds: outside });
+  if (floating.length) warnings.push({ kind: 'floating', message: printWarningMessage('floating', locale), brickIds: floating });
+  if (excessiveOverhang.length) warnings.push({ kind: 'overhang', message: printWarningMessage('overhang', locale), brickIds: excessiveOverhang });
   return warnings;
 }

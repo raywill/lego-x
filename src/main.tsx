@@ -2,6 +2,7 @@ import { lazy, StrictMode, Suspense } from 'react';
 import { createRoot } from 'react-dom/client';
 import { BrowserRouter, Route, Routes } from 'react-router-dom';
 import { CampaignPageTracker } from './analytics/CampaignPageTracker';
+import { tr, useLocale } from './i18n/locale';
 import './styles.css';
 
 const App = lazy(() => import('./App').then((module) => ({ default: module.App })));
@@ -12,7 +13,8 @@ const ProfilePage = lazy(() => import('./components/Community/ProfilePage').then
 const WorkPage = lazy(() => import('./components/Community/WorkPage').then((module) => ({ default: module.WorkPage })));
 
 function PageFallback() {
-  return <main className="page-fallback" role="status">正在打开数字积木…</main>;
+  const locale = useLocale();
+  return <main className="page-fallback" role="status">{tr(locale, '正在打开数字积木…', 'Opening Digital Bricks…')}</main>;
 }
 
 createRoot(document.getElementById('root')!).render(
@@ -28,6 +30,13 @@ createRoot(document.getElementById('root')!).render(
           <Route path="/account" element={<AccountPage />} />
           <Route path="/w/:workId" element={<WorkPage />} />
           <Route path="/u/:publicId" element={<ProfilePage />} />
+          <Route path="/en" element={<App />} />
+          <Route path="/en/build" element={<App />} />
+          <Route path="/en/start" element={<LandingPage />} />
+          <Route path="/en/plaza" element={<PlazaPage />} />
+          <Route path="/en/account" element={<AccountPage />} />
+          <Route path="/en/w/:workId" element={<WorkPage />} />
+          <Route path="/en/u/:publicId" element={<ProfilePage />} />
           <Route path="*" element={<App />} />
         </Routes>
       </Suspense>

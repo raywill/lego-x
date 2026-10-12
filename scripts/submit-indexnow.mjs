@@ -5,6 +5,10 @@ const urlList = [
   `https://${host}/start`,
   `https://${host}/plaza`,
   `https://${host}/privacy.html`,
+  `https://${host}/en`,
+  `https://${host}/en/start`,
+  `https://${host}/en/plaza`,
+  `https://${host}/en/privacy.html`,
 ];
 
 const response = await fetch('https://api.indexnow.org/indexnow', {
