@@ -54,7 +54,9 @@ function externalReferrerHost() {
 function readState(): CampaignState {
   try {
     const value = window.sessionStorage.getItem(STORAGE_KEY);
-    return value ? JSON.parse(value) as CampaignState : {};
+    if (!value) return {};
+    const parsed: unknown = JSON.parse(value);
+    return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed as CampaignState : {};
   } catch {
     return {};
   }
@@ -89,26 +91,30 @@ function postPageView(route: CampaignRoute, from: CampaignRoute | undefined, att
 }
 
 export function trackCampaignNavigation(destination: string, from: CampaignRoute) {
-  const target = new URL(destination, window.location.origin);
-  const route = abstractRoute(target.pathname);
-  if (!route) return;
+  try {
+    const target = new URL(destination, window.location.origin);
+    const route = abstractRoute(target.pathname);
+    if (!route) return;
 
-  const now = Date.now();
-  const stored = readState();
-  const storedIsFresh = Boolean(stored.previousAt && now - stored.previousAt <= TRANSITION_WINDOW_MS);
-  const activeStored: CampaignState = storedIsFresh ? stored : {};
-  const query = target.searchParams;
-  const attribution: Attribution = {
-    source: safeValue(query.get('utm_source'), 64) || activeStored.source,
-    medium: safeValue(query.get('utm_medium'), 64) || activeStored.medium,
-    campaign: safeValue(query.get('utm_campaign'), 80) || activeStored.campaign,
-    content: safeValue(query.get('utm_content'), 80) || activeStored.content,
-    referrerHost: activeStored.referrerHost || externalReferrerHost(),
-  };
+    const now = Date.now();
+    const stored = readState();
+    const storedIsFresh = Boolean(stored.previousAt && now - stored.previousAt <= TRANSITION_WINDOW_MS);
+    const activeStored: CampaignState = storedIsFresh ? stored : {};
+    const query = target.searchParams;
+    const attribution: Attribution = {
+      source: safeValue(query.get('utm_source'), 64) || activeStored.source,
+      medium: safeValue(query.get('utm_medium'), 64) || activeStored.medium,
+      campaign: safeValue(query.get('utm_campaign'), 80) || activeStored.campaign,
+      content: safeValue(query.get('utm_content'), 80) || activeStored.content,
+      referrerHost: activeStored.referrerHost || externalReferrerHost(),
+    };
 
-  lastReportedPathname = target.pathname;
-  postPageView(route, from, attribution);
-  writeState({ ...attribution, previousRoute: route, previousAt: now });
+    lastReportedPathname = target.pathname;
+    postPageView(route, from, attribution);
+    writeState({ ...attribution, previousRoute: route, previousAt: now });
+  } catch {
+    // Campaign measurement must never block navigation.
+  }
 }
 
 export function CampaignPageTracker() {
