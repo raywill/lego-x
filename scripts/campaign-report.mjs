@@ -69,14 +69,14 @@ async function campaignLogPaths(logPath) {
     .map((name) => join(directory, name));
 }
 
-async function* campaignLines(logPath) {
-  if (logPath === '-') {
+async function* campaignLines(paths) {
+  if (paths[0] === '-') {
     const lines = createInterface({ input: process.stdin, crlfDelay: Infinity });
     for await (const line of lines) yield line;
     return;
   }
 
-  for (const path of await campaignLogPaths(logPath)) {
+  for (const path of paths) {
     const file = createReadStream(path);
     const input = path.endsWith('.gz') ? file.pipe(createGunzip()) : file;
     const lines = createInterface({ input, crlfDelay: Infinity });
@@ -123,6 +123,9 @@ const to = toInput ? parseDate(toInput, 'to') : new Date();
 if (to <= from) throw new Error('--to must be later than the report start time');
 if (!['markdown', 'json'].includes(format)) throw new Error('--format must be markdown or json');
 
+const logPaths = logPath === '-' ? ['-'] : await campaignLogPaths(logPath);
+if (!logPaths.length) throw new Error(`No campaign log files found for ${logPath}`);
+
 const report = {
   from: from.toISOString(),
   to: to.toISOString(),
@@ -132,10 +135,13 @@ const report = {
   campaigns: new Map(),
   conversionContent: new Map(),
   minuteBursts: new Map(),
+  filesRead: logPaths.length,
+  linesRead: 0,
   malformedLines: 0,
 };
 
-for await (const line of campaignLines(logPath)) {
+for await (const line of campaignLines(logPaths)) {
+  report.linesRead += 1;
   if (!line.trim()) continue;
   let entry;
   try {
@@ -187,6 +193,8 @@ const serializable = {
   campaigns: Object.fromEntries(report.campaigns),
   conversionContent: Object.fromEntries(report.conversionContent),
   suspiciousBursts,
+  filesRead: report.filesRead,
+  linesRead: report.linesRead,
   malformedLines: report.malformedLines,
 };
 
@@ -207,6 +215,7 @@ if (format === 'json') {
     }
   }
   console.log(`\nSuspicious bursts (>30 events for one source and route in one minute): ${suspiciousBursts.length}.`);
-  console.log(`Malformed lines: ${report.malformedLines}. Bots are filtered before this anonymous log is written.`);
-  console.log('Views and transitions are event counts, not unique visitors. Transition rate is start → build transitions divided by start page views.');
+  console.log(`Files read: ${report.filesRead}; lines read: ${report.linesRead}; malformed lines: ${report.malformedLines}.`);
+  console.log('Bots are filtered before this anonymous log is written. Views and transitions are event counts, not unique visitors.');
+  console.log('Transition rate compares events inside the selected window, not a user cohort, and can exceed 100% at low volume.');
 }
