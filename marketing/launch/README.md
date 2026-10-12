@@ -2,7 +2,7 @@
 
 更新时间：2026-10-12
 
-渠道范围：站点所有者已授权公开发布和常规公开回复；V2EX 因无账号暂停，不纳入本轮分发。
+渠道范围：站点所有者已授权公开发布和常规公开回复；V2EX 因无账号暂停，即刻按站点所有者要求移出本轮分发。
 
 ## 核心定位
 
@@ -16,7 +16,8 @@
 
 - 横版社交预览：[`../../public/social-preview.png`](../../public/social-preview.png)
 - 竖版首发图：[`01-digital-bricks-launch.png`](./01-digital-bricks-launch.png)
-- 正式推广落地页：<https://bricks.reactshare.cn/start>
+- 中文推广落地页：<https://bricks.reactshare.cn/start>
+- 英文推广落地页：<https://bricks.reactshare.cn/en/start>
 - AI 建模规则：<https://bricks.reactshare.cn/digital-bricks-modeling-skill.md>
 - GitHub：<https://github.com/raywill/lego-x>
 
@@ -27,8 +28,7 @@
 | 渠道 | 可直接使用的链接 |
 | --- | --- |
 | 小红书 | <https://bricks.reactshare.cn/start?utm_source=xiaohongshu&utm_medium=social&utm_campaign=launch_202610> |
-| 即刻 | <https://bricks.reactshare.cn/start?utm_source=jike&utm_medium=social&utm_campaign=launch_202610> |
-| Three.js Forum | <https://bricks.reactshare.cn/start?utm_source=threejs_forum&utm_medium=community&utm_campaign=launch_202610> |
+| Three.js Forum | <https://bricks.reactshare.cn/en/start?utm_source=threejs_forum&utm_medium=community&utm_campaign=launch_202610&utm_content=threejs_showcase> |
 | OpenAI Showcase | <https://bricks.reactshare.cn/start?utm_source=openai_showcase&utm_medium=directory&utm_campaign=launch_202610> |
 | Awesome WebMCP | <https://bricks.reactshare.cn/start?utm_source=awesome_webmcp&utm_medium=directory&utm_campaign=launch_202610> |
 | Product Hunt | <https://bricks.reactshare.cn/start?utm_source=product_hunt&utm_medium=launch&utm_campaign=launch_202610> |
@@ -93,23 +93,36 @@
 标题：
 
 ```text
-Digital Bricks — a child-friendly R3F construction editor with connector snapping and manifold STL export
+Digital Bricks — an open-source R3F construction editor with snapping and printable STL export
 ```
 
 正文：
 
 ```text
-I built Digital Bricks, a browser-based 3D construction editor designed to make a first modeling experience feel like playing with blocks.
+Hi everyone,
 
-It uses explicit connector frames and quaternion alignment for snapping, deterministic gravity placement with collision checks, and Manifold to union the finished assembly into a watertight binary STL. Building and export work without an account. Public projects can be shared and remixed with source attribution.
+I’ve just launched **Digital Bricks**, an open-source browser construction editor built with three.js and React Three Fiber. I made it to give children, parents, and makers a simple first step into 3D modeling: drag a part into the scene, let it settle onto the build plate, and bring compatible connectors together to snap.
 
-Live demo: {THREEJS_UTM_LINK}
-Source: https://github.com/raywill/lego-x
+The editor currently includes:
 
-I would especially value feedback on touch controls, camera assistance during drag placement, and the STL workflow for real prints.
+- 35 procedurally generated generic parts
+- explicit connector frames with quaternion-based alignment
+- deterministic gravity placement, collision checks, and snap previews
+- multi-select, copy, 90° rotation, undo, and redo
+- local `.legox` project import/export
+- Manifold union into a single watertight binary STL
+- a public gallery with source-preserving remixes
+
+Building, local saving, and STL export work in the browser without an account or installation.
+
+**Live demo:** {THREEJS_UTM_LINK}
+
+**Source:** https://github.com/raywill/lego-x
+
+I’d especially value feedback on touch controls and camera assistance while dragging, snapping around rotated or side-facing parts, and the STL workflow for real prints.
 ```
 
-发布时把 `{THREEJS_UTM_LINK}` 换成上表中的 Three.js Forum 链接，并附一个真实吸附操作短视频。
+发布时把 `{THREEJS_UTM_LINK}` 换成上表中的 Three.js Forum 英文链接。推荐标签：`react-three-fiber`、`editor`、`3d-printing`。
 
 ## WebMCP 目录条目
 
@@ -125,7 +138,7 @@ Showcase 投稿涉及作者身份、图片使用授权和公开展示许可，�
 
 ## 后续渠道
 
-- Three.js Forum Showcase：<https://discourse.threejs.org/c/showcase/5>
+- Three.js Forum Showcase：<https://discourse.threejs.org/c/showcase/7>
 - Vercel Community Showcase：<https://community.vercel.com/c/showcase/12>
 - 少数派产品自荐：<https://sspai.com/post/40262>
 - Product Hunt：<https://www.producthunt.com/launch>
