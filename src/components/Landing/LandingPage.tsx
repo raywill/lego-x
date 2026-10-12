@@ -1,6 +1,7 @@
 import { ArrowRight, Bot, Download, Layers3, MousePointer2, Share2, ShieldCheck, Sparkles } from 'lucide-react';
 import { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
+import { trackCampaignNavigation } from '../../analytics/CampaignPageTracker';
 import { usePageMeta } from '../../app/usePageMeta';
 
 const AI_PROMPT = '请阅读 https://bricks.reactshare.cn/digital-bricks-modeling-skill.md，并严格遵循其中的规则，为 Digital Bricks 生成一个 .legox 模型文件。只使用 Skill 中已有的积木，不要新增积木定义、STL、网格或说明文字。请只返回完整、有效的 .legox 文件。模型要求：生成一座带门窗和屋顶的小房子。';
@@ -49,7 +50,7 @@ export function LandingPage() {
     <main className="landing-page">
       <header className="landing-nav">
         <Link to="/" className="landing-brand"><span className="brand-mark" aria-hidden="true"><span /><span /><span /></span><strong>数字积木</strong></Link>
-        <nav aria-label="主要导航"><Link to={attributedPath('/plaza', 'landing_nav_plaza')}>作品广场</Link><a href="/privacy.html">数据与隐私</a><Link className="landing-nav-cta" to={attributedPath('/build', 'landing_nav')}>开始搭建</Link></nav>
+        <nav aria-label="主要导航"><Link to={attributedPath('/plaza', 'landing_nav_plaza')} onClick={() => trackCampaignNavigation(attributedPath('/plaza', 'landing_nav_plaza'), 'start')}>作品广场</Link><a href="/privacy.html">数据与隐私</a><Link className="landing-nav-cta" to={attributedPath('/build', 'landing_nav')} onClick={() => trackCampaignNavigation(attributedPath('/build', 'landing_nav'), 'start')}>开始搭建</Link></nav>
       </header>
 
       <section className="landing-hero">
@@ -58,8 +59,8 @@ export function LandingPage() {
           <h1>像搭积木一样做 3D 模型，<em>还能直接打印</em></h1>
           <p>专为孩子、家长和创客设计的浏览器 3D 搭建工具。拖一拖就能自动落位和卡接，完成后保存、分享，或导出 STL 变成真实作品。</p>
           <div className="landing-actions">
-            <Link className="landing-primary" to={attributedPath('/build', 'landing_hero')}>立即开始搭建<ArrowRight size={19} /></Link>
-            <Link className="landing-secondary" to={attributedPath('/plaza', 'landing_hero_plaza')}>看看大家的作品</Link>
+            <Link className="landing-primary" to={attributedPath('/build', 'landing_hero')} onClick={() => trackCampaignNavigation(attributedPath('/build', 'landing_hero'), 'start')}>立即开始搭建<ArrowRight size={19} /></Link>
+            <Link className="landing-secondary" to={attributedPath('/plaza', 'landing_hero_plaza')} onClick={() => trackCampaignNavigation(attributedPath('/plaza', 'landing_hero_plaza'), 'start')}>看看大家的作品</Link>
           </div>
           <small>搭建和导出不需要账户，作品默认保存在当前浏览器。</small>
         </div>
@@ -78,9 +79,9 @@ export function LandingPage() {
         <div className="landing-prompt-card"><div><Layers3 size={19} /><strong>小房子示例提示词</strong></div><p>{AI_PROMPT}</p><button type="button" onClick={() => void copyPrompt()}>{copied ? '已复制，可以交给 AI 了' : '复制提示词'}</button></div>
       </section>
 
-      <section className="landing-final-cta"><span>准备好第一块了吗？</span><h2>现在就把脑海里的东西搭出来</h2><Link className="landing-primary" to={attributedPath('/build', 'landing_bottom')}>打开 3D 画板<ArrowRight size={19} /></Link></section>
+      <section className="landing-final-cta"><span>准备好第一块了吗？</span><h2>现在就把脑海里的东西搭出来</h2><Link className="landing-primary" to={attributedPath('/build', 'landing_bottom')} onClick={() => trackCampaignNavigation(attributedPath('/build', 'landing_bottom'), 'start')}>打开 3D 画板<ArrowRight size={19} /></Link></section>
 
-      <footer className="landing-footer"><span>Digital Bricks · 原创数字积木连接系统</span><div><Link to={attributedPath('/plaza', 'landing_footer_plaza')}>作品广场</Link><a href="/privacy.html">数据与隐私</a><a href="https://github.com/raywill/lego-x">GitHub</a></div></footer>
+      <footer className="landing-footer"><span>Digital Bricks · 原创数字积木连接系统</span><div><Link to={attributedPath('/plaza', 'landing_footer_plaza')} onClick={() => trackCampaignNavigation(attributedPath('/plaza', 'landing_footer_plaza'), 'start')}>作品广场</Link><a href="/privacy.html">数据与隐私</a><a href="https://github.com/raywill/lego-x">GitHub</a></div></footer>
     </main>
   );
 }
