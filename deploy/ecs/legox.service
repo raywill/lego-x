@@ -13,7 +13,10 @@ Environment=NODE_ENV=production
 Environment=PORT=3100
 Environment=BETTER_AUTH_URL=https://bricks.reactshare.cn
 Environment=WEBAUTHN_RP_ID=bricks.reactshare.cn
-ExecStart=/usr/bin/npm run start:ecs
+Environment=NODE_OPTIONS=--max-old-space-size=192
+ExecStart=/usr/bin/node /home/wwwroot/bricks.reactshare.cn/server-dist/api.cjs
+MemoryHigh=256M
+MemoryMax=384M
 Restart=always
 RestartSec=5
 NoNewPrivileges=true

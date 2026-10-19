@@ -70,6 +70,8 @@ npm test
 
 ## 作品社区配置
 
+ECS 部署在开发机执行 `npm run build:ecs`，上传 `dist/` 与 `server-dist/`，再重启 `legox.service`。API 已打包为独立的 Node.js 24 程序；ECS 无需安装依赖、构建或测试，避免影响同机的其它站点。
+
 作品社区使用 Better Auth Passkey 和 MySQL/TiDB。未配置服务端环境变量时，浏览器建模、`localStorage`、`.legox` 文件与 STL 导出仍可独立使用。
 
 ```bash
