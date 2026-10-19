@@ -1,4 +1,5 @@
 import { PROJECT_VERSION } from '../config/brickConfig';
+import { validateTexts } from '../../shared/texts';
 import { getBrickDefinition } from '../bricks/catalog';
 import { areConnectorsCompatible, getWorldConnectors } from './snapping/snapEngine';
 import type {
@@ -189,6 +190,7 @@ const validateProjectValue = (
     version: value.version as 1 | 2,
     bricks,
     connections,
+    ...(value.texts === undefined ? {} : { texts: validateTexts(value.texts, seenBrickIds) }),
     ...(typeof value.catalogVersion === 'number' ? { catalogVersion: value.catalogVersion } : {}),
     ...(provenance ? {
       provenance: {
@@ -216,9 +218,10 @@ export const removeConnectionsForBrick = (
 
 export const serializeProject = (project: ProjectSnapshot): string => {
   const validated = validateProjectValue({
-    version: project.provenance || project.catalogVersion ? 2 : PROJECT_VERSION,
+    version: project.provenance || project.catalogVersion || project.texts?.length ? 2 : PROJECT_VERSION,
     bricks: project.bricks,
     connections: project.connections,
+    texts: project.texts,
     ...(project.catalogVersion === undefined ? {} : { catalogVersion: project.catalogVersion }),
     ...(project.provenance === undefined ? {} : { provenance: project.provenance }),
   });
@@ -245,6 +248,7 @@ export const deserializeProject = (serialized: string): ProjectData => {
 export const cloneProjectSnapshot = (project: ProjectSnapshot): ProjectSnapshot => ({
   bricks: project.bricks.map(cloneBrick),
   connections: project.connections.map(cloneConnection),
+  texts: validateTexts(project.texts, new Set(project.bricks.map((brick) => brick.id))),
   ...(project.catalogVersion === undefined ? {} : { catalogVersion: project.catalogVersion }),
   ...(project.provenance === undefined ? {} : { provenance: { ...project.provenance } }),
 });

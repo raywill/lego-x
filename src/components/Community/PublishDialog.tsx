@@ -1,5 +1,6 @@
 import { CheckCircle2, Copy, ExternalLink, KeyRound, LoaderCircle, Save, Share2, ShieldCheck, X } from 'lucide-react';
-import { useMemo, useState, type ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
+import { loadTextFont } from '../../editor/text/textGeometry';
 import { useNavigate } from 'react-router-dom';
 import { communityApi } from '../../community/api';
 import { copyShareLink, shareLink } from '../../community/share';
@@ -21,9 +22,17 @@ export function PublishDialog({ onClose }: { onClose: () => void }) {
   const [publishedWork, setPublishedWork] = useState<PublicWork | null>(null);
   const bricks = useEditorStore((state) => state.bricks);
   const connections = useEditorStore((state) => state.connections);
+  const texts = useEditorStore((state) => state.texts);
   const provenance = useEditorStore((state) => state.provenance);
   const saveProject = useEditorStore((state) => state.saveProject);
-  const preview = useMemo(() => captureProjectThumbnail(bricks), [bricks]);
+  const [preview, setPreview] = useState('');
+  useEffect(() => {
+    let active = true;
+    void (texts.length ? loadTextFont() : Promise.resolve()).then(() => {
+      if (active) setPreview(captureProjectThumbnail(bricks, texts));
+    }).catch((error) => { if (active) setMessage(String(error)); });
+    return () => { active = false; };
+  }, [bricks, texts]);
   const needsPin = !user?.guardianApproved;
 
   const continueAfterLogin = (register = false) => {
@@ -46,9 +55,11 @@ export function PublishDialog({ onClose }: { onClose: () => void }) {
         catalogVersion: BRICK_CATALOG_VERSION,
         bricks,
         connections,
+        texts,
         ...(provenance ? { provenance } : {}),
       };
-      const work = await communityApi.publish({ title, project, thumbnail: captureProjectThumbnail(bricks), ...(needsPin ? { guardianPin } : {}) });
+      if (texts.length) await loadTextFont();
+      const work = await communityApi.publish({ title, project, thumbnail: captureProjectThumbnail(bricks, texts), ...(needsPin ? { guardianPin } : {}) });
       setPublishedWork(work);
       setMessage('');
     } catch (error) { setMessage(tr(locale, error instanceof Error ? error.message : '发布失败，请再试一次', 'Publishing failed. Please try again.')); }

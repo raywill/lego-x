@@ -5,6 +5,8 @@ import { usePageMeta } from './app/usePageMeta';
 import { useWebMcpTools } from './app/useWebMcpTools';
 import { BrickPalette } from './components/BrickPalette/BrickPalette';
 import { BrickScene } from './components/Scene/BrickScene';
+import { TextTools } from './components/Selection/TextTools';
+import { useTextToolStore } from './store/textToolStore';
 import type { CameraView } from './components/Scene/CameraRig';
 import { isSnapToastMessage } from './components/Scene/DragInteraction';
 import { SelectionToolbar } from './components/Selection/SelectionToolbar';
@@ -54,11 +56,12 @@ function CameraControls({ view, onChange }: { view: CameraView; onChange: (view:
 }
 
 function OnboardingHint() {
+  const usingText = useTextToolStore((state) => Boolean(state.draft || state.selectedId));
   const locale = useLocale();
   const count = useEditorStore((state) => state.bricks.length);
   const dragging = useEditorStore((state) => Boolean(state.drag));
   const selectedId = useEditorStore((state) => state.selectedId);
-  if (dragging || selectedId || count > 1) return null;
+  if (dragging || selectedId || count > 1 || usingText) return null;
   return (
     <div className="scene-hint">
       {count === 0 ? (
@@ -185,6 +188,7 @@ export function App() {
         <BrickPalette />
         <div className="scene-panel">
           <BrickScene view={view} resetKey={viewResetKey} />
+          <TextTools />
           <SelectionOverlay />
           <OnboardingHint />
           <SnapLegend />

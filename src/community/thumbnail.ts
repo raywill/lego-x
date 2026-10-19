@@ -14,7 +14,8 @@ import {
 } from 'three';
 import { getBrickDefinition } from '../bricks/catalog';
 import { createBrickGroup } from '../bricks/geometry';
-import type { BrickInstance } from '../types/model';
+import type { BrickInstance, TextDecoration } from '../types/model';
+import { addTextsToAssembly } from '../editor/text/textAssembly';
 
 const WIDTH = 640;
 const HEIGHT = 480;
@@ -47,7 +48,7 @@ function colorfulFallback(bricks: BrickInstance[]) {
 }
 
 /** Renders an independent, colorful preview instead of reading the interactive WebGL canvas. */
-export function captureProjectThumbnail(bricks: BrickInstance[]): string {
+export function captureProjectThumbnail(bricks: BrickInstance[], texts: readonly TextDecoration[] = []): string {
   if (!bricks.length) return colorfulFallback(bricks);
   const canvas = document.createElement('canvas');
   let renderer: WebGLRenderer | null = null;
@@ -77,6 +78,7 @@ export function captureProjectThumbnail(bricks: BrickInstance[]): string {
       object.traverse((child) => { if (child instanceof Mesh) { child.castShadow = true; child.receiveShadow = true; } });
       assembly.add(object);
     });
+    addTextsToAssembly(assembly, bricks, texts);
     if (!assembly.children.length) return colorfulFallback(bricks);
     assembly.updateMatrixWorld(true);
     const bounds = new Box3().setFromObject(assembly);

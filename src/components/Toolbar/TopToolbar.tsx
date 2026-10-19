@@ -38,6 +38,7 @@ export function TopToolbar({ onPublish }: { onPublish?: () => void }) {
   const projectFileRef = useRef<HTMLInputElement>(null);
   const bricks = useEditorStore((state) => state.bricks);
   const connections = useEditorStore((state) => state.connections);
+  const texts = useEditorStore((state) => state.texts);
   const canUndo = useEditorStore((state) => state.past.length > 0);
   const canRedo = useEditorStore((state) => state.future.length > 0);
   const undo = useEditorStore((state) => state.undo);
@@ -77,7 +78,7 @@ export function TopToolbar({ onPublish }: { onPublish?: () => void }) {
     setToast(tr(locale, `正在按 ${scale}× 合成实体…`, `Merging model at ${scale}×…`));
     try {
       const suffix = scale === 1 ? '' : `-${scale}x`;
-      await downloadStl(bricks, `${tr(locale, '我的数字积木', 'my-digital-bricks')}${suffix}.stl`, scale, connections);
+      await downloadStl(bricks, `${tr(locale, '我的数字积木', 'my-digital-bricks')}${suffix}.stl`, scale, connections, texts);
       const hasMiniCube = bricks.some((brick) => brick.definitionId === 'mini-cube');
       const miniWarning = hasMiniCube && scale <= 0.5
         ? tr(locale, '；迷你方块可能太小，打印前请确认', '; mini cubes may be too small, so check before printing')
@@ -103,7 +104,7 @@ export function TopToolbar({ onPublish }: { onPublish?: () => void }) {
     }
     setSavingProjectFile(true);
     try {
-      const method = await saveLegoxFile({ bricks, connections }, filename);
+      const method = await saveLegoxFile({ bricks, connections, texts }, filename);
       saveProject();
       setToast(method === 'picker'
         ? tr(locale, '作品已保存到你选择的位置', 'Project saved to the selected location')

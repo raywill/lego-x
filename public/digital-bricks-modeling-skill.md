@@ -40,6 +40,18 @@ Never generate STL, mesh vertices, mesh faces, Three.js code, arbitrary CAD geom
 - `connections` is required, even when there are no verified connections: use `"connections": []`. Never omit this field and never store connector world positions.
 - Use unique stable brick IDs such as `b1`, `b2`, `roof-left`, and `wheel-front-left`.
 
+## Optional raised text
+
+Projects may include a top-level `texts` array (omit it or use `[]` if unused). Text is attached to one host brick, follows its transform, and never occupies connectors or blocks another brick from touching. Maximum 100 texts per project.
+
+```json
+{"id":"label-1","hostBrickId":"b1","content":"家","size":4,"color":"#343746","position":[0,5,0],"rotation":[-1.5707963267948966,0,0]}
+```
+
+This example places one character on the top face of the 10 mm cube `b1`. Position and rotation are in **host-local coordinates**, with the text's local +Z facing outward. Size is the actual glyph height in mm and must be `4`, `6`, or `8`. Content is a single line of 1–20 characters; Chinese, English, digits and common punctuation are supported by the bundled Noto Sans SC font. Color must be `#RRGGBB`.
+
+The complete text rectangle must fit on one flat, axis-aligned solid face of the host, without crossing its edges or holes. Do not place text on sloped or curved surfaces. Text is generated as solid glyphs without a backing plate, embedded 0.2 mm into the host and protruding exactly 1.2 mm; do not specify thickness or add support geometry yourself. An adjacent brick may cover the text, which becomes internal geometry when exported. If you cannot prove that the complete text fits, omit it and let the user add text in the editor.
+
 ## Catalog: only these `definitionId` values are legal
 
 | Group | `definitionId` | Body size `[x,y,z]` mm |

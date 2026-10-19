@@ -1,4 +1,5 @@
 import type { ProjectSnapshot } from '../src/types/model';
+import { validateTexts } from './texts.js';
 
 export const COMMUNITY_CATALOG_VERSION = 2 as const;
 export const MAX_PUBLISHED_BRICKS = 500;
@@ -100,6 +101,7 @@ export function validatePublishedProject(value: unknown): PublishedProject {
     catalogVersion: typeof candidate.catalogVersion === 'number' ? candidate.catalogVersion : COMMUNITY_CATALOG_VERSION,
     bricks: candidate.bricks as PublishedProject['bricks'],
     connections: candidate.connections as PublishedProject['connections'],
+    texts: validateTexts(candidate.texts, ids),
     ...(provenance ? { provenance: provenance as RemixOrigin } : {}),
   };
 }

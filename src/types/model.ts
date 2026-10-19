@@ -90,6 +90,7 @@ export interface Connection {
 }
 
 export interface ProjectSnapshot {
+  texts?: TextDecoration[];
   bricks: BrickInstance[];
   connections: Connection[];
   catalogVersion?: number;
@@ -97,6 +98,17 @@ export interface ProjectSnapshot {
     sourceWorkId: string;
     sourceVersionId: string;
   };
+}
+
+/** Coordinates are relative to the host; local +Z points out of its surface. */
+export interface TextDecoration {
+  id: string;
+  hostBrickId: string;
+  content: string;
+  size: 4 | 6 | 8;
+  color: string;
+  position: Vec3Tuple;
+  rotation: EulerTuple;
 }
 
 export interface ProjectData extends ProjectSnapshot {

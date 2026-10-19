@@ -11,6 +11,9 @@ import { GravityDropPreview } from './GravityDropPreview';
 import { GroupPlacementInteraction } from './GroupPlacementInteraction';
 import { KeyboardMovement } from './KeyboardMovement';
 import { PrintBed } from './PrintBed';
+import { TextObject } from './TextObject';
+import { TextInteraction } from './TextInteraction';
+import { useTextToolStore } from '../../store/textToolStore';
 
 function SceneContents({ view, resetKey }: { view: CameraView; resetKey: number }) {
   const bricks = useEditorStore((state) => state.bricks);
@@ -18,12 +21,16 @@ function SceneContents({ view, resetKey }: { view: CameraView; resetKey: number 
   const groupCopy = useEditorStore((state) => state.groupCopy);
   const groupMove = useEditorStore((state) => state.groupMove);
   const drag = useEditorStore((state) => state.drag);
+  const texts = useEditorStore((state) => state.texts);
+  const textDraft = useTextToolStore((state) => state.draft);
   const selectBrick = useEditorStore((state) => state.selectBrick);
   const toggleBrickSelection = useEditorStore((state) => state.toggleBrickSelection);
   const startBrickDrag = useEditorStore((state) => state.startBrickDrag);
 
   const startDrag = useCallback((event: ThreeEvent<PointerEvent>, brick: BrickInstance) => {
     if (event.button !== 0) return;
+    if (useTextToolStore.getState().draft) return;
+    useTextToolStore.getState().select(null);
     if (
       useEditorStore.getState().drag
       || useEditorStore.getState().groupCopy
@@ -84,6 +91,20 @@ function SceneContents({ view, resetKey }: { view: CameraView; resetKey: number 
         shadow-camera-bottom={-130}
       />
       <PrintBed />
+      {texts.map((text) => {
+        if (textDraft?.id === text.id) return null;
+        const host = bricks.find((brick) => brick.id === text.hostBrickId);
+        if (!host || host.id === hiddenBrickId || groupMoveIds.has(host.id)) return null;
+        return <TextObject key={text.id} text={text} host={host} />;
+      })}
+      {texts.map((text) => {
+        const host = drag?.hasMoved && drag.preview.id === text.hostBrickId ? drag.preview : groupMove?.bricks.find((brick) => brick.id === text.hostBrickId);
+        return host ? <TextObject key={`moving-${text.id}`} text={text} host={host} opacity={0.68} /> : null;
+      })}
+      {groupCopy?.texts?.map((text) => {
+        const host = groupCopy.bricks.find((brick) => brick.id === text.hostBrickId);
+        return host ? <TextObject key={`copy-${text.id}`} text={text} host={host} opacity={0.58} /> : null;
+      })}
       {bricks.map((brick) => brick.id === hiddenBrickId || groupMoveIds.has(brick.id) ? null : (
         <BrickObject
           brick={brick}
@@ -110,11 +131,12 @@ function SceneContents({ view, resetKey }: { view: CameraView; resetKey: number 
       ))}
       <GroupPlacementInteraction />
       <DragInteraction />
+      <TextInteraction />
       <KeyboardMovement />
       <CameraRig
         view={view}
         resetKey={resetKey}
-        dragging={Boolean(drag) || Boolean(groupCopy) || Boolean(groupMove)}
+        dragging={Boolean(drag) || Boolean(groupCopy) || Boolean(groupMove) || Boolean(textDraft)}
       />
     </>
   );

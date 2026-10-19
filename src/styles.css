@@ -6,6 +6,23 @@
   text-rendering: optimizeLegibility;
 }
 
+.add-text-button { position:absolute; z-index:5; top:18px; left:18px; display:flex; align-items:center; gap:8px; min-height:44px; padding:0 15px; border:1px solid #d5d9e8; border-radius:10px; background:white; color:#433c71; font-weight:800; box-shadow:0 4px 14px #34415b12; }
+.add-text-button:disabled { opacity:.5; }
+.text-placement-hint { position:absolute; z-index:5; top:72px; left:18px; padding:10px; display:flex; align-items:center; gap:12px; border-radius:10px; background:#fff; font-size:13px; box-shadow:0 3px 12px #34415b22; }
+.text-placement-hint button { display:flex; background:transparent; }
+.text-selection-toolbar strong { max-width:160px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; padding:0 8px; }
+.text-dialog-backdrop { position:absolute; inset:0; z-index:40; display:grid; place-items:center; background:#1e244040; padding:16px; }
+.text-dialog { width:min(420px,100%); display:grid; gap:16px; border-radius:16px; padding:24px; background:white; box-shadow:0 18px 60px #16204840; }
+.text-dialog h2 { margin:0; font-size:21px; }
+.text-dialog label { display:grid; gap:8px; }
+.text-dialog input:not([type=color]) { width:100%; border:1px solid #c4c7da; border-radius:8px; min-height:44px; padding:10px; font:inherit; }
+.text-dialog > span { color:#6f6c80; font-size:13px; }
+.text-size-options, .text-dialog-actions { display:flex; gap:10px; align-items:center; }
+.text-size-options button, .text-dialog-actions button { min-height:42px; padding:8px 16px; border:1px solid #d8d9e7; border-radius:8px; background:#f7f7fb; }
+.text-size-options .active, .text-dialog-actions .primary { color:white; background:#6154ce; }
+.text-dialog-actions { justify-content:flex-end; }
+.text-dialog p { color:#b23445; margin:0; }
+
 * { box-sizing: border-box; }
 html, body, #root { width: 100%; min-width: 320px; height: 100%; margin: 0; overflow: hidden; }
 button { font: inherit; }

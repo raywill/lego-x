@@ -23,7 +23,9 @@ import { createBrickGroup } from '../bricks/geometry';
 import { snapBrickToGrid } from '../editor/grid/gridEngine';
 import { getWorldConnectors } from '../editor/snapping/snapEngine';
 import { currentLocale, tr } from '../i18n/locale';
-import type { BrickInstance, Connection } from '../types/model';
+import type { BrickInstance, Connection, TextDecoration } from '../types/model';
+import { addTextsToAssembly } from '../editor/text/textAssembly';
+import { loadTextFont } from '../editor/text/textGeometry';
 
 const MANIFOLD_WELD_TOLERANCE_MM = 1e-5;
 const SPHERE_CONNECTOR_FOOT_RADIUS_MM = 3;
@@ -104,6 +106,7 @@ function addSphereConnectorFeet(
 export function createPrintableAssembly(
   bricks: BrickInstance[],
   connections: readonly Connection[] = [],
+  texts: readonly TextDecoration[] = [],
 ): Group {
   const assembly = new Group();
   assembly.name = 'Digital Bricks printable assembly';
@@ -123,6 +126,7 @@ export function createPrintableAssembly(
   }
 
   addSphereConnectorFeet(assembly, bricks, connections);
+  addTextsToAssembly(assembly, bricks.map((brick) => snapBrickToGrid(brick)), texts);
 
   assembly.updateMatrixWorld(true);
   const bounds = new Box3().setFromObject(assembly, true);
@@ -249,8 +253,10 @@ function hasTriangles(geometry: BufferGeometry): boolean {
 async function buildUnionGeometry(
   bricks: BrickInstance[],
   connections: readonly Connection[],
+  texts: readonly TextDecoration[],
 ): Promise<BufferGeometry> {
-  const assembly = createPrintableAssembly(bricks, connections);
+  if (texts.length) await loadTextFont();
+  const assembly = createPrintableAssembly(bricks, connections, texts);
   const solids: Manifold[] = [];
   const worldGeometries: BufferGeometry[] = [];
 
@@ -272,18 +278,23 @@ async function buildUnionGeometry(
       }
     }
 
-    if (solids.length !== worldGeometries.length) return triangleSoupGeometry(worldGeometries);
+    if (solids.length !== worldGeometries.length) {
+      if (texts.length) throw new Error('文字实体合并失败，请修改文字后重试');
+      return triangleSoupGeometry(worldGeometries);
+    }
 
     const union = module.Manifold.union(solids);
     try {
       const geometry = manifoldToGeometry(union);
       if (hasTriangles(geometry)) return geometry;
       geometry.dispose();
+      if (texts.length) throw new Error('文字实体合并后为空，请修改文字后重试');
       return triangleSoupGeometry(worldGeometries);
     } finally {
       union.delete();
     }
   } catch (error) {
+    if (texts.length) throw error;
     try {
       if (worldGeometries.length) return triangleSoupGeometry(worldGeometries);
     } catch (fallbackError) {
@@ -303,11 +314,12 @@ export async function buildBinaryStl(
   bricks: BrickInstance[],
   scale = 1,
   connections: readonly Connection[] = [],
+  texts: readonly TextDecoration[] = [],
 ): Promise<ArrayBuffer> {
   if (!bricks.length) throw new Error(tr(currentLocale(), '场景里还没有积木', 'There are no bricks in the scene yet'));
   if (!Number.isFinite(scale) || scale <= 0) throw new Error(tr(currentLocale(), '打印比例必须大于 0', 'The print scale must be greater than 0'));
 
-  const geometry = await buildUnionGeometry(bricks, connections);
+  const geometry = await buildUnionGeometry(bricks, connections, texts);
   geometry.scale(scale, scale, scale);
   if (!hasTriangles(geometry)) {
     geometry.dispose();
@@ -340,8 +352,9 @@ export async function downloadStl(
   filename = tr(currentLocale(), '我的数字积木.stl', 'my-digital-bricks.stl'),
   scale = 1,
   connections: readonly Connection[] = [],
+  texts: readonly TextDecoration[] = [],
 ): Promise<void> {
-  const data = await buildBinaryStl(bricks, scale, connections);
+  const data = await buildBinaryStl(bricks, scale, connections, texts);
   const blob = new Blob([data], { type: 'model/stl' });
   const url = URL.createObjectURL(blob);
   const anchor = document.createElement('a');

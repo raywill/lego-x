@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { validateTexts } from '../../shared/texts';
 import {
   BRICK_UNIT,
   HISTORY_LIMIT,
@@ -50,6 +51,7 @@ import type {
   Connection,
   EulerTuple,
   ProjectSnapshot,
+  TextDecoration,
   Vec3Tuple,
 } from '../types/model';
 
@@ -92,6 +94,7 @@ export interface DragState {
 export type EditorDragState = DragState;
 
 export interface GroupCopyState {
+  texts?: TextDecoration[];
   bricks: BrickInstance[];
   connections: Connection[];
 }
@@ -102,6 +105,9 @@ export interface GroupMoveState {
 }
 
 export interface EditorStore {
+  texts: TextDecoration[];
+  putText: (text: TextDecoration) => void;
+  deleteText: (id: string) => void;
   bricks: BrickInstance[];
   connections: Connection[];
   provenance?: ProjectSnapshot['provenance'];
@@ -232,8 +238,8 @@ const normaliseProject = (
   return { bricks: collisionFreeBricks, connections: validConnections };
 };
 
-const snapshotOf = (state: Pick<EditorStore, 'bricks' | 'connections' | 'provenance'>): ProjectSnapshot =>
-  cloneProjectSnapshot({ bricks: state.bricks, connections: state.connections, provenance: state.provenance });
+const snapshotOf = (state: Pick<EditorStore, 'bricks' | 'connections' | 'provenance' | 'texts'>): ProjectSnapshot =>
+  cloneProjectSnapshot({ bricks: state.bricks, connections: state.connections, provenance: state.provenance, texts: state.texts });
 
 const appendHistory = (
   history: readonly ProjectSnapshot[],
@@ -309,6 +315,7 @@ const withCommittedProject = (
 ): Partial<EditorStore> => ({
   bricks,
   connections,
+  texts: state.texts.filter((text) => bricks.some((brick) => brick.id === text.hostBrickId)),
   past: appendHistory(state.past, snapshotOf(state)),
   future: [],
   drag: null,
@@ -343,6 +350,13 @@ function rotateAndLand(
 }
 
 export const useEditorStore = create<EditorStore>((set, get) => ({
+  texts: [],
+  putText: (text) => set((state) => withCommittedProject(state, state.bricks, state.connections, {
+    texts: validateTexts([...state.texts.filter((item) => item.id !== text.id), text], new Set(state.bricks.map((brick) => brick.id))),
+  })),
+  deleteText: (id) => set((state) => withCommittedProject(state, state.bricks, state.connections, {
+    texts: state.texts.filter((text) => text.id !== id),
+  })),
   bricks: [],
   connections: [],
   provenance: undefined,
@@ -426,6 +440,10 @@ export const useEditorStore = create<EditorStore>((set, get) => ({
       ? state.selectedIds
       : state.selectedId ? [state.selectedId] : [];
     if (selectedIds.length === 0 || state.drag || state.groupCopy || state.groupMove) return false;
+    if (state.texts.length + state.texts.filter((text) => selectedIds.includes(text.hostBrickId)).length > 100) {
+      set({ toast: editorText('每个作品最多 100 条文字', 'A project can contain up to 100 text labels.') });
+      return false;
+    }
     const duplicated = duplicateBrickGroup(
       state.bricks,
       state.connections,
@@ -440,7 +458,9 @@ export const useEditorStore = create<EditorStore>((set, get) => ({
       [anchor[0] + BRICK_UNIT, anchor[2] + BRICK_UNIT],
     );
     set({
-      groupCopy: { bricks: copies, connections: duplicated.connections },
+      groupCopy: { bricks: copies, connections: duplicated.connections,
+        texts: state.texts.filter((text) => duplicated.sourceToCopyId.has(text.hostBrickId)).map((text) => ({ ...structuredClone(text), id: makeBrickId(), hostBrickId: duplicated.sourceToCopyId.get(text.hostBrickId)! })),
+      },
       toast: editorText('移动整组副本，点击放下', 'Move the copied group, then click to place it.'),
     });
     return true;
@@ -499,6 +519,7 @@ export const useEditorStore = create<EditorStore>((set, get) => ({
             selectedId: copiedIds.at(-1) ?? null,
             selectedIds: copiedIds,
             multiSelectMode: true,
+            texts: [...current.texts, ...(current.groupCopy.texts ?? [])],
             groupCopy: null,
             groupMove: null,
             toast: editorText(
@@ -749,6 +770,10 @@ export const useEditorStore = create<EditorStore>((set, get) => ({
     const { selectedId, bricks } = get();
     const source = bricks.find((brick) => brick.id === selectedId);
     if (!source) return null;
+    if (get().texts.length + get().texts.filter((text) => text.hostBrickId === source.id).length > 100) {
+      set({ toast: editorText('每个作品最多 100 条文字', 'A project can contain up to 100 text labels.') });
+      return null;
+    }
 
     const id = makeBrickId();
     const requestedDuplicate = safeBrick({
@@ -766,7 +791,9 @@ export const useEditorStore = create<EditorStore>((set, get) => ({
         state,
         [...state.bricks.map(cloneBrick), duplicate],
         state.connections.map((connection) => ({ ...connection })),
-        { selectedId: id, selectedIds: [id], multiSelectMode: false },
+        { selectedId: id, selectedIds: [id], multiSelectMode: false,
+          texts: [...state.texts, ...state.texts.filter((text) => text.hostBrickId === source.id).map((text) => ({ ...structuredClone(text), id: makeBrickId(), hostBrickId: id }))],
+        },
       );
     });
     return id;
@@ -819,6 +846,7 @@ export const useEditorStore = create<EditorStore>((set, get) => ({
       return {
         bricks: normalised.bricks,
         connections: normalised.connections,
+        texts: restored.texts ?? [],
         selectedId: null,
         selectedIds: [],
         multiSelectMode: false,
@@ -840,6 +868,7 @@ export const useEditorStore = create<EditorStore>((set, get) => ({
       return {
         bricks: normalised.bricks,
         connections: normalised.connections,
+        texts: restored.texts ?? [],
         selectedId: null,
         selectedIds: [],
         multiSelectMode: false,
@@ -893,6 +922,7 @@ export const useEditorStore = create<EditorStore>((set, get) => ({
           normalised.connections,
           {
             provenance: project.provenance,
+            texts: project.texts ?? [],
             selectedId: null,
             selectedIds: [],
             multiSelectMode: false,
