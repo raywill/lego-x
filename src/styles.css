@@ -6,9 +6,7 @@
   text-rendering: optimizeLegibility;
 }
 
-.add-text-button { position:absolute; z-index:5; top:18px; left:18px; display:flex; align-items:center; gap:8px; min-height:44px; padding:0 15px; border:1px solid #d5d9e8; border-radius:10px; background:white; color:#433c71; font-weight:800; box-shadow:0 4px 14px #34415b12; }
-.add-text-button:disabled { opacity:.5; }
-.text-placement-hint { position:absolute; z-index:5; top:72px; left:18px; padding:10px; display:flex; align-items:center; gap:12px; border-radius:10px; background:#fff; font-size:13px; box-shadow:0 3px 12px #34415b22; }
+.text-placement-hint { position:absolute; z-index:5; top:18px; left:18px; max-width:calc(100% - 36px); padding:10px; display:flex; align-items:center; gap:12px; border-radius:10px; background:#fff; font-size:13px; box-shadow:0 3px 12px #34415b22; }
 .text-placement-hint button { display:flex; background:transparent; }
 .text-selection-toolbar strong { max-width:160px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; padding:0 8px; }
 .text-dialog-backdrop { position:absolute; inset:0; z-index:40; display:grid; place-items:center; background:#1e244040; padding:16px; }
@@ -178,6 +176,10 @@ button:focus-visible { outline: 3px solid #ffd84d; outline-offset: 2px; }
 .brick-glyph { width: 76px; height: 59px; display: grid; place-items: center; pointer-events: none; }
 .brick-glyph svg { width: 76px; height: 58px; overflow: visible; filter: drop-shadow(0 4px 3px rgba(40,37,67,.13)); }
 .palette-card-name { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: .79rem; font-weight: 750; }
+.palette-text-card { cursor: pointer; touch-action: manipulation; color: #6154ce; }
+.palette-text-card .brick-glyph svg { width: 36px; height: 36px; }
+.palette-text-card:disabled { opacity: .5; cursor: default; transform: none; box-shadow: none; }
+.palette-text-hint { display: block; margin: 7px 4px 0; color: #858296; font-size: .72rem; line-height: 1.5; }
 
 .scene-panel { min-width: 0; min-height: 0; position: relative; overflow: hidden; background: #f4f7fd; }
 .scene-panel canvas { display: block; width: 100%; height: 100%; touch-action: none; }
@@ -433,6 +435,8 @@ button:focus-visible { outline: 3px solid #ffd84d; outline-offset: 2px; }
   .palette-desktop-hint { display: none; }.palette-mobile-hint { display: inline; }
   .palette-category { display: grid; grid-template-rows: 20px minmax(0, 1fr); min-width: max-content; }.palette-category + .palette-category { margin: 0; }.palette-category h2 { margin: 0 3px 3px; }
   .palette-grid { display: flex; gap: 7px; }.palette-card { width: 86px; min-width: 86px; min-height: 100px; touch-action: pan-x; }.brick-glyph, .brick-glyph svg { width: 70px; }
+  .palette-text-hint { display: none; }
+  .text-placement-hint { top: 61px; left: 10px; max-width: calc(100% - 20px); }
   .camera-controls { top: 10px; right: 10px; }.camera-controls button { min-width: 43px; }
   .scene-hint, .snap-legend { top: 61px; }.warning-stack { top: 112px; left: 10px; max-width: calc(100% - 20px); }
   .multi-select-hint { top: 61px; }

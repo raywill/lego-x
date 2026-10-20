@@ -1,15 +1,16 @@
-import { useState } from 'react';
-import { Type, X } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { X } from 'lucide-react';
 import { loadTextFont, createTextGeometry } from '../../editor/text/textGeometry';
 import { textFitsSurface } from '../../editor/text/textPlacement';
 import { useEditorStore } from '../../store/editorStore';
 import { useTextToolStore } from '../../store/textToolStore';
-import type { TextDecoration } from '../../types/model';
 import { tr, useLocale } from '../../i18n/locale';
 
 export function TextTools() {
   const locale = useLocale();
-  const [form, setForm] = useState<TextDecoration | null>(null);
+  const form = useTextToolStore((state) => state.form);
+  const setForm = useTextToolStore((state) => state.setForm);
+  const open = useTextToolStore((state) => state.openForm);
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
   const selectedId = useTextToolStore((state) => state.selectedId);
@@ -17,11 +18,7 @@ export function TextTools() {
   const texts = useEditorStore((state) => state.texts);
   const selected = texts.find((text) => text.id === selectedId);
   const bricks = useEditorStore((state) => state.bricks);
-  const placingBricks = useEditorStore((state) => Boolean(state.drag || state.groupCopy || state.groupMove));
-  const open = (text?: TextDecoration) => {
-    setError('');
-    setForm(text ? structuredClone(text) : { id: `text-${crypto.randomUUID()}`, content: '', size: 6, color: '#343746', hostBrickId: '', position: [0, 0, 0], rotation: [0, 0, 0] });
-  };
+  useEffect(() => { setError(''); }, [form?.id]);
   const submit = async (reposition: boolean) => {
     if (!form || busy) return;
     setBusy(true); setError('');
@@ -43,8 +40,7 @@ export function TextTools() {
     finally { setBusy(false); }
   };
   return <>
-    <button className="add-text-button" disabled={!bricks.length || Boolean(draft) || placingBricks} onClick={() => open()}><Type size={19} />{tr(locale, '文字', 'Text')}</button>
-    {draft && <div className="text-placement-hint">{tr(locale, '拖到平整面，松手贴上 · Esc 取消', 'Drag onto a flat face and release · Esc to cancel')}<button onClick={() => useTextToolStore.getState().cancel()} aria-label="取消"><X size={16} /></button></div>}
+    {draft && <div className="text-placement-hint">{tr(locale, '把文字贴到积木的平面上 · 松手确认 · Esc 取消', 'Place text on a flat brick face · Release to confirm · Esc to cancel')}<button onClick={() => useTextToolStore.getState().cancel()} aria-label="取消"><X size={16} /></button></div>}
     {selected && !draft && !form && <div className="selection-toolbar text-selection-toolbar" role="toolbar">
       <strong>{selected.content}</strong>
       <button onClick={() => open(selected)}>{tr(locale, '编辑文字', 'Edit text')}</button>

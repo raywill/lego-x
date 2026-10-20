@@ -56,7 +56,7 @@ function CameraControls({ view, onChange }: { view: CameraView; onChange: (view:
 }
 
 function OnboardingHint() {
-  const usingText = useTextToolStore((state) => Boolean(state.draft || state.selectedId));
+  const usingText = useTextToolStore((state) => Boolean(state.draft || state.selectedId || state.form));
   const locale = useLocale();
   const count = useEditorStore((state) => state.bricks.length);
   const dragging = useEditorStore((state) => Boolean(state.drag));

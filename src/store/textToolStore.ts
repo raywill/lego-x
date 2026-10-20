@@ -2,6 +2,9 @@ import { create } from 'zustand';
 import type { TextDecoration } from '../types/model';
 
 interface TextToolStore {
+  form: TextDecoration | null;
+  openForm: (text?: TextDecoration) => void;
+  setForm: (form: TextDecoration | null) => void;
   selectedId: string | null;
   draft: TextDecoration | null;
   preview: TextDecoration | null;
@@ -13,6 +16,12 @@ interface TextToolStore {
 }
 
 export const useTextToolStore = create<TextToolStore>((set) => ({
+  form: null,
+  openForm: (text) => set({ form: text ? structuredClone(text) : {
+    id: `text-${crypto.randomUUID()}`, content: '', size: 6, color: '#343746',
+    hostBrickId: '', position: [0, 0, 0], rotation: [0, 0, 0],
+  } }),
+  setForm: (form) => set({ form }),
   selectedId: null, draft: null, preview: null, valid: false,
   select: (selectedId) => set({ selectedId }),
   begin: (draft) => set({ draft, preview: null, valid: false, selectedId: null }),

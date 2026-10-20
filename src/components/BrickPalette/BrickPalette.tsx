@@ -7,6 +7,7 @@ import { tr, useLocale } from '../../i18n/locale';
 import { useEditorStore } from '../../store/editorStore';
 import type { BrickCategory } from '../../types/model';
 import { BrickGlyph } from './BrickGlyph';
+import { TextPaletteSection } from './TextPaletteSection';
 
 const categoryNames: Record<BrickCategory, { zh: string; en: string }> = {
   blocks: { zh: '方块与板', en: 'Blocks & plates' },
@@ -70,6 +71,7 @@ export function BrickPalette() {
         </div>
       </div>
 
+      <TextPaletteSection />
       {(Object.keys(categoryNames) as BrickCategory[]).map((category) => {
         const pieces = BRICK_DEFINITIONS.filter((piece) => piece.category === category);
         return (
