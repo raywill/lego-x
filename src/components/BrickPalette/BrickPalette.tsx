@@ -71,7 +71,6 @@ export function BrickPalette() {
         </div>
       </div>
 
-      <TextPaletteSection />
       {(Object.keys(categoryNames) as BrickCategory[]).map((category) => {
         const pieces = BRICK_DEFINITIONS.filter((piece) => piece.category === category);
         return (
@@ -124,6 +123,7 @@ export function BrickPalette() {
           </section>
         );
       })}
+      <TextPaletteSection />
     </aside>
   );
 }

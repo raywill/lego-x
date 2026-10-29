@@ -19,7 +19,8 @@ describe('text palette entry and shared text form', () => {
     expect(palette).toMatch(/<aside[^>]*aria-label="积木篮"/);
     expect(palette).toContain('<section class="palette-category" aria-label="文字">');
     expect(palette).toContain('添加文字');
-    expect(palette.indexOf('添加文字')).toBeLessThan(palette.indexOf('方块与板'));
+    expect(palette.indexOf('添加文字')).toBeGreaterThan(palette.indexOf('转动零件'));
+    expect(palette).toMatch(/<\/section><\/aside>$/);
     expect(palette).toContain('先放一块积木，再贴文字');
     expect(palette).toMatch(/class="palette-card palette-text-card" disabled=""/);
     const tools = renderToStaticMarkup(<MemoryRouter><TextTools /></MemoryRouter>);
