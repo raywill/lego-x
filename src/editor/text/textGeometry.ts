@@ -1,10 +1,10 @@
-import { parse, type Font } from 'opentype.js';
+import type { Font } from 'opentype.js';
 import { ExtrudeGeometry, Mesh, MeshStandardMaterial, ShapePath } from 'three';
 import type { TextDecoration } from '../../types/model';
+import { createGlyphPath, textFontLoader } from './textFonts';
 
 export const TEXT_EMBED_MM = 0.2;
 export const TEXT_RELIEF_MM = 1.2;
-let fontPromise: Promise<Font> | undefined;
 let loadedFont: Font | undefined;
 const geometryCache = new Map<string, ExtrudeGeometry>();
 
@@ -14,18 +14,8 @@ export function setTextFont(font: Font): void {
   loadedFont = font;
 }
 
-export function loadTextFont(): Promise<Font> {
-  if (loadedFont) return Promise.resolve(loadedFont);
-  if (!fontPromise) {
-    fontPromise = fetch('/fonts/NotoSansSC.ttf')
-      .then((response) => {
-        if (!response.ok) throw new Error('字体加载失败，请重试');
-        return response.arrayBuffer();
-      })
-      .then((buffer) => { loadedFont = parse(buffer); return loadedFont; })
-      .catch((error) => { fontPromise = undefined; throw error; });
-  }
-  return fontPromise;
+export function loadTextFont(content: string): Promise<void> {
+  return loadedFont ? Promise.resolve() : textFontLoader.load(content);
 }
 
 /** The same solid glyphs are used in the editor, thumbnails, and STL. */
@@ -43,14 +33,7 @@ export function createTextGeometry(content: string, size: number): ExtrudeGeomet
 }
 
 function buildTextGeometry(content: string, size: number): ExtrudeGeometry {
-  if (!loadedFont) throw new Error('字体尚未加载');
-  for (const character of content) {
-    if (character !== ' ' && !loadedFont.charToGlyphIndex(character)) {
-      throw new Error(`字体不支持字符：${character}`);
-    }
-  }
-  const fontOptions = { kerning: true, variation: { wght: 600 } };
-  const path = loadedFont.getPath(content, 0, 0, size, fontOptions);
+  const path = createGlyphPath(content, size, (character) => loadedFont ?? textFontLoader.fontFor(character));
   const shape = new ShapePath();
   for (const command of path.commands) {
     switch (command.type) {

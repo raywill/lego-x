@@ -255,7 +255,7 @@ async function buildUnionGeometry(
   connections: readonly Connection[],
   texts: readonly TextDecoration[],
 ): Promise<BufferGeometry> {
-  if (texts.length) await loadTextFont();
+  await loadTextFont(texts.map((text) => text.content).join(''));
   const assembly = createPrintableAssembly(bricks, connections, texts);
   const solids: Manifold[] = [];
   const worldGeometries: BufferGeometry[] = [];

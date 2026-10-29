@@ -28,7 +28,7 @@ export function PublishDialog({ onClose }: { onClose: () => void }) {
   const [preview, setPreview] = useState('');
   useEffect(() => {
     let active = true;
-    void (texts.length ? loadTextFont() : Promise.resolve()).then(() => {
+    void loadTextFont(texts.map((text) => text.content).join('')).then(() => {
       if (active) setPreview(captureProjectThumbnail(bricks, texts));
     }).catch((error) => { if (active) setMessage(String(error)); });
     return () => { active = false; };
@@ -58,7 +58,7 @@ export function PublishDialog({ onClose }: { onClose: () => void }) {
         texts,
         ...(provenance ? { provenance } : {}),
       };
-      if (texts.length) await loadTextFont();
+      await loadTextFont(texts.map((text) => text.content).join(''));
       const work = await communityApi.publish({ title, project, thumbnail: captureProjectThumbnail(bricks, texts), ...(needsPin ? { guardianPin } : {}) });
       setPublishedWork(work);
       setMessage('');

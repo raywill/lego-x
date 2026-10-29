@@ -14,7 +14,7 @@ export function TextObject({ text, host, ghost = false, valid = true, opacity = 
   useEffect(() => {
     let active = true;
     let group: Group | null = null;
-    void loadTextFont().then(() => {
+    void loadTextFont(text.content).then(() => {
       if (!active) return;
       group = new Group();
       const mesh = createTextMesh({ ...text, color: ghost ? (valid ? '#226fce' : '#e24c50') : text.color }, ghost ? 0.65 : opacity);

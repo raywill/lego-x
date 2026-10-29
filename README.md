@@ -68,6 +68,12 @@ npm test
 - `public/`：SEO、隐私说明、AI 建模规则和分享素材
 - `marketing/launch/`：首发图片、渠道文案与 UTM 链接
 
+## 文字字体资产
+
+文字采用固定 600 字重的 Noto Sans SC 轮廓，按 Unicode 字形分包按需加载；输入时预取，并复用并发请求与浏览器缓存。无文字的作品不会下载字体。
+
+`public/fonts/NotoSansSC.ttf` 保留用于旧版页面兼容和资产再生成，新版不会整包请求它。分包已提交到 Git，正常 `npm install` / 构建不需要 Python；仅更新字体资产时，在本地安装 `fonttools==4.60.1` 并运行 `python scripts/build-text-fonts.py`，同时保留 `public/fonts/OFL.txt`。更换分包规则或字体时需递增 `text-600-v1` 目录版本，避免缓存混用。
+
 ## 作品社区配置
 
 ECS 部署在开发机执行 `npm run build:ecs`，上传 `dist/` 与 `server-dist/`，再重启 `legox.service`。API 已打包为独立的 Node.js 24 程序；ECS 无需安装依赖、构建或测试，避免影响同机的其它站点。
